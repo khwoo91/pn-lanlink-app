@@ -1,6 +1,36 @@
 import { LitElement, html } from 'lit';
 import { customElement, state, query } from 'lit/decorators.js';
-import { createIcons, Users, Copy, Lock, Square, Info, Crown, ShieldAlert, X } from 'lucide';
+import { 
+  createIcons, 
+  Users, 
+  Copy, 
+  Lock, 
+  Square, 
+  Info, 
+  Crown, 
+  ShieldAlert, 
+  X,
+  Zap,
+  User,
+  Pencil,
+  Sun,
+  Moon,
+  Monitor,
+  Video,
+  Keyboard,
+  Search,
+  Unlock,
+  MessagesSquare,
+  SendHorizontal,
+  MousePointer,
+  PenTool,
+  Pointer,
+  PlayCircle,
+  Mic,
+  MousePointerClick,
+  UserPlus,
+  Check
+} from 'lucide';
 
 // Import components to register them as custom elements
 import './components/common/ll-header';
@@ -34,7 +64,27 @@ export class MyElement extends LitElement {
         Info,
         Crown,
         ShieldAlert,
-        X
+        X,
+        Zap,
+        User,
+        Pencil,
+        Sun,
+        Moon,
+        Monitor,
+        Video,
+        Keyboard,
+        Search,
+        Unlock,
+        MessagesSquare,
+        SendHorizontal,
+        MousePointer,
+        PenTool,
+        Pointer,
+        PlayCircle,
+        Mic,
+        MousePointerClick,
+        UserPlus,
+        Check
       }
     });
   }
