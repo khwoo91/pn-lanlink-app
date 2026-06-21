@@ -20,7 +20,7 @@ export class LlHero extends LitElement {
         <div class="space-y-4">
           <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.15]">
             안전하고 자유로운 <br class="hidden md:inline">
-            <span class="text-[#1a73e8]">사내망 화면 공유</span> 및 제어
+            <span class="text-google-blue">사내망 화면 공유</span> 및 제어
           </h1>
           <p class="text-md md:text-lg text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg">
             외부 인터넷 연결 없이 오직 사내망(LAN)을 통해 딜레이 없는 초고화질 무설치 스트리밍과 통화를 가동해 보세요.
@@ -35,7 +35,7 @@ export class LlHero extends LitElement {
             </button>
 
             <!-- Code input -->
-            <div class="flex items-center flex-grow max-w-sm relative">
+            <div class="flex items-center grow max-w-sm relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <i data-lucide="keyboard" class="w-4 h-4"></i>
               </div>

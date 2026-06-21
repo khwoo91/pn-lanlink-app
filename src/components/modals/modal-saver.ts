@@ -17,11 +17,11 @@ export class ModalSaver extends LitElement {
           <div class="p-2 bg-amber-500/10 rounded-lg text-amber-600 dark:text-amber-400">
             <i data-lucide="shield-alert" class="w-6 h-6 animate-pulse"></i>
           </div>
-          <div class="flex-grow space-y-1 text-left">
+          <div class="grow space-y-1 text-left">
             <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
               대역폭 보호 세이버 작동 예정 🚦
             </h4>
-            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               최근 30분간 참여한 팀원이 감지되지 않았습니다. 대역폭 및 PC 배터리 자원 방지를 위해 <strong id="idle-timer-text" class="text-rose-500 font-mono text-sm">${this.countdown}</strong>초 후 공유방을 자동으로 완전 폭파합니다.
             </p>
             <div class="flex gap-2 pt-3">

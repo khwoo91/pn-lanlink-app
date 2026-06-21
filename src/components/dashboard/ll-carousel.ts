@@ -27,32 +27,36 @@ export class LlCarousel extends LitElement {
   render() {
     return html`
       <div id="landing-visual-panel" class="flex flex-col items-center justify-center text-center">
-        <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 max-w-md w-full custom-shadow space-y-6">
-          
-          <div class="w-48 h-48 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto relative">
-            <svg class="w-32 h-32 text-[#1a73e8]" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <circle cx="50" cy="50" r="45" stroke-dasharray="4,4" class="text-slate-300 dark:text-slate-600"/>
-              <circle cx="30" cy="50" r="12" fill="white" class="dark:fill-slate-950" stroke="#1a73e8" stroke-width="3"/>
-              <path d="M18 72 C22 62, 38 62, 42 72" stroke="#1a73e8" stroke-width="3"/>
-              <circle cx="70" cy="50" r="12" fill="white" class="dark:fill-slate-950" stroke="#1a73e8" stroke-width="3"/>
-              <path d="M58 72 C62 62, 78 62, 82 72" stroke="#1a73e8" stroke-width="3"/>
-              <rect x="42" y="42" width="16" height="16" rx="4" fill="#1a73e8" class="animate-pulse"/>
-              <i data-lucide="link" class="w-4 h-4 text-white absolute top-[90px] left-[104px]"></i>
+        <div
+          class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 max-w-md w-full custom-shadow space-y-6">
+      
+          <div
+            class="w-48 h-48 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto relative">
+            <svg class="w-32 h-32 text-google-blue" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round">
+              <circle cx="50" cy="50" r="45" stroke-dasharray="4,4" class="text-slate-300 dark:text-slate-600" />
+              <circle cx="30" cy="50" r="12" fill="white" class="dark:fill-slate-950" stroke="#1a73e8" stroke-width="3" />
+              <path d="M18 72 C22 62, 38 62, 42 72" stroke="#1a73e8" stroke-width="3" />
+              <circle cx="70" cy="50" r="12" fill="white" class="dark:fill-slate-950" stroke="#1a73e8" stroke-width="3" />
+              <path d="M58 72 C62 62, 78 62, 82 72" stroke="#1a73e8" stroke-width="3" />
+              <rect x="42" y="42" width="16" height="16" rx="4" fill="#1a73e8" class="animate-pulse" />
+              <i data-lucide="link" class="w-4 h-4 text-white absolute top-22.5 left-25"></i>
             </svg>
           </div>
-
+      
           <div class="space-y-2">
-            <h2 id="carousel-title" class="text-base font-extrabold text-slate-900 dark:text-white">${this.carouselData[this.carouselIndex].title}</h2>
+            <h2 id="carousel-title" class="text-base font-extrabold text-slate-900 dark:text-white">
+              ${this.carouselData[this.carouselIndex].title}</h2>
             <p id="carousel-desc" class="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
               ${this.carouselData[this.carouselIndex].desc}
             </p>
           </div>
-
+      
           <!-- Carousel Indicators -->
           <div class="flex items-center justify-center space-x-1.5 pt-2">
-            <button @click=${() => this.onSwitchCarousel(0)} id="carousel-dot-0" class="${this.carouselIndex === 0 ? 'w-2.5 h-2.5 bg-[#1a73e8]' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
-            <button @click=${() => this.onSwitchCarousel(1)} id="carousel-dot-1" class="${this.carouselIndex === 1 ? 'w-2.5 h-2.5 bg-[#1a73e8]' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
-            <button @click=${() => this.onSwitchCarousel(2)} id="carousel-dot-2" class="${this.carouselIndex === 2 ? 'w-2.5 h-2.5 bg-[#1a73e8]' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
+            <button @click=${()=> this.onSwitchCarousel(0)} id="carousel-dot-0" class="${this.carouselIndex === 0 ? 'w-2.5 h-2.5 bg-goggle-blue' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
+            <button @click=${()=> this.onSwitchCarousel(1)} id="carousel-dot-1" class="${this.carouselIndex === 1 ? 'w-2.5 h-2.5 bg-goggle-blue' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
+            <button @click=${()=> this.onSwitchCarousel(2)} id="carousel-dot-2" class="${this.carouselIndex === 2 ? 'w-2.5 h-2.5 bg-goggle-blue' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
           </div>
         </div>
       </div>

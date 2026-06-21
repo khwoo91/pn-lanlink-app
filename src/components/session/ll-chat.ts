@@ -29,7 +29,7 @@ export class LlChat extends LitElement {
         </div>
         
         <!-- Logs list -->
-        <div id="chat-messages-box" class="flex-grow p-3 overflow-y-auto space-y-2 text-xs min-h-62.5 max-h-87.5">
+        <div id="chat-messages-box" class="grow p-3 overflow-y-auto space-y-2 text-xs min-h-62.5 max-h-87.5">
           ${this.chatMessages.map(msg => msg.system ? html`
             <div class="bg-blue-50/50 dark:bg-blue-950/20 p-2.5 rounded-lg text-slate-500 border border-google-blue/10 text-xs leading-relaxed">
               ${msg.content}
@@ -46,7 +46,7 @@ export class LlChat extends LitElement {
 
         <!-- Chat form -->
         <div class="p-2 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-b-2xl flex gap-1.5">
-          <input type="text" id="chat-input-field" placeholder="보안 메시지 전송..." @keydown=${this.handleChatEnter} class="flex-grow bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-lg text-xs focus:outline-none focus:border-google-blue text-slate-800 dark:text-slate-200">
+          <input type="text" id="chat-input-field" placeholder="보안 메시지 전송..." @keydown=${this.handleChatEnter} class="grow bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-lg text-xs focus:outline-none focus:border-google-blue text-slate-800 dark:text-slate-200">
           <button @click=${this.onSendMessage} class="p-2 bg-google-blue hover:bg-google-blueHover text-white rounded-lg transition">
             <i data-lucide="send-horizontal" class="w-4 h-4"></i>
           </button>
