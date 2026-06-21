@@ -1,20 +1,13 @@
 import { LitElement, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { createIcons, Zap, User, Pencil, Sun, Moon, Monitor, Crown } from 'lucide';
+import { createIcons } from 'lucide';
+import { globalIcons } from '../../utils/icons';
 
 @customElement('ll-header')
 export class LlHeader extends LitElement {
   updated() {
     createIcons({
-      icons: {
-        Zap,
-        User,
-        Pencil,
-        Sun,
-        Moon,
-        Monitor,
-        Crown
-      },
+      icons: globalIcons,
       root: this
     });
   }

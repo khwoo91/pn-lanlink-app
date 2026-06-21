@@ -1,6 +1,7 @@
 import { LitElement, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { createIcons, Search, Lock, Unlock } from 'lucide';
+import { createIcons } from 'lucide';
+import { globalIcons } from '../../utils/icons';
 import { mockRooms } from '../../infrastructure/mdns-signaling';
 import type { LANRoom } from '../../infrastructure/mdns-signaling';
 
@@ -8,11 +9,7 @@ import type { LANRoom } from '../../infrastructure/mdns-signaling';
 export class LlMdnsList extends LitElement {
   updated() {
     createIcons({
-      icons: {
-        Search,
-        Lock,
-        Unlock
-      },
+      icons: globalIcons,
       root: this
     });
   }

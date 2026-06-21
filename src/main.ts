@@ -1,36 +1,7 @@
 import { LitElement, html } from 'lit';
 import { customElement, state, query } from 'lit/decorators.js';
-import { 
-  createIcons, 
-  Users, 
-  Copy, 
-  Lock, 
-  Square, 
-  Info, 
-  Crown, 
-  ShieldAlert, 
-  X,
-  Zap,
-  User,
-  Pencil,
-  Sun,
-  Moon,
-  Monitor,
-  Video,
-  Keyboard,
-  Search,
-  Unlock,
-  MessagesSquare,
-  SendHorizontal,
-  MousePointer,
-  PenTool,
-  Pointer,
-  PlayCircle,
-  Mic,
-  MousePointerClick,
-  UserPlus,
-  Check
-} from 'lucide';
+import { createIcons } from 'lucide';
+import { globalIcons } from './utils/icons';
 
 // Import components to register them as custom elements
 import './components/common/ll-header';
@@ -56,36 +27,7 @@ import type { LANRoom } from './infrastructure/mdns-signaling';
 export class MyElement extends LitElement {
   updated() {
     createIcons({
-      icons: {
-        Users,
-        Copy,
-        Lock,
-        Square,
-        Info,
-        Crown,
-        ShieldAlert,
-        X,
-        Zap,
-        User,
-        Pencil,
-        Sun,
-        Moon,
-        Monitor,
-        Video,
-        Keyboard,
-        Search,
-        Unlock,
-        MessagesSquare,
-        SendHorizontal,
-        MousePointer,
-        PenTool,
-        Pointer,
-        PlayCircle,
-        Mic,
-        MousePointerClick,
-        UserPlus,
-        Check
-      },
+      icons: globalIcons,
       root: this
     });
   }

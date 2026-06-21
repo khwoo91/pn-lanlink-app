@@ -1,14 +1,13 @@
 import { LitElement, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { createIcons, Link } from 'lucide';
+import { createIcons } from 'lucide';
+import { globalIcons } from '../../utils/icons';
 
 @customElement('ll-carousel')
 export class LlCarousel extends LitElement {
   updated() {
     createIcons({
-      icons: {
-        Link
-      },
+      icons: globalIcons,
       root: this
     });
   }

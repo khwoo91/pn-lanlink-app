@@ -1,16 +1,13 @@
 import { LitElement, html } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
-import { createIcons, MessagesSquare, Users, SendHorizontal } from 'lucide';
+import { createIcons } from 'lucide';
+import { globalIcons } from '../../utils/icons';
 
 @customElement('ll-chat')
 export class LlChat extends LitElement {
   updated() {
     createIcons({
-      icons: {
-        MessagesSquare,
-        Users,
-        SendHorizontal
-      },
+      icons: globalIcons,
       root: this
     });
   }
