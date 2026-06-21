@@ -6,14 +6,19 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gitpush": "git add . && git commit -m 'update' && git push"
   },
   "dependencies": {
+    "crypto-js": "^4.2.0",
     "lit": "^3.3.2",
+    "lucide": "^1.21.0",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.1",
     "@tailwindcss/vite": "^4.3.1",
+    "@types/crypto-js": "^4.2.2",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.1",

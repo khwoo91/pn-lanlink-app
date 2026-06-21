@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "LANLink",
+  "version": "1.0.0",
+  "description": "사내망 다이렉트 화면 공유 및 제어",
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "tabCapture"
+  ]
+}
