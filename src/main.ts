@@ -85,7 +85,8 @@ export class MyElement extends LitElement {
         MousePointerClick,
         UserPlus,
         Check
-      }
+      },
+      root: this
     });
   }
   // Use Light DOM for seamless styling via tailwind.css and global plugins

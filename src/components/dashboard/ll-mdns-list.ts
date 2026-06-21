@@ -12,7 +12,8 @@ export class LlMdnsList extends LitElement {
         Search,
         Lock,
         Unlock
-      }
+      },
+      root: this
     });
   }
   createRenderRoot() {

@@ -1,8 +1,17 @@
 import { LitElement, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { createIcons, Link } from 'lucide';
 
 @customElement('ll-carousel')
 export class LlCarousel extends LitElement {
+  updated() {
+    createIcons({
+      icons: {
+        Link
+      },
+      root: this
+    });
+  }
   createRenderRoot() {
     return this;
   }

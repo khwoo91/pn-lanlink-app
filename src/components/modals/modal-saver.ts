@@ -8,7 +8,8 @@ export class ModalSaver extends LitElement {
     createIcons({
       icons: {
         ShieldAlert
-      }
+      },
+      root: this
     });
   }
   createRenderRoot() {

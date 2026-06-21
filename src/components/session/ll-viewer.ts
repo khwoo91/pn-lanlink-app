@@ -14,7 +14,8 @@ export class LlViewer extends LitElement {
         Mic,
         MousePointerClick,
         Pencil
-      }
+      },
+      root: this
     });
   }
   createRenderRoot() {

@@ -10,7 +10,8 @@ export class LlChat extends LitElement {
         MessagesSquare,
         Users,
         SendHorizontal
-      }
+      },
+      root: this
     });
   }
   createRenderRoot() {

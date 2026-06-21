@@ -14,7 +14,8 @@ export class LlHeader extends LitElement {
         Moon,
         Monitor,
         Crown
-      }
+      },
+      root: this
     });
   }
   createRenderRoot() {

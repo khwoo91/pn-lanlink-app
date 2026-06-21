@@ -8,7 +8,8 @@ export class ModalPassword extends LitElement {
     createIcons({
       icons: {
         ShieldAlert
-      }
+      },
+      root: this
     });
   }
   createRenderRoot() {

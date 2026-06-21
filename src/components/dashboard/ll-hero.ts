@@ -10,7 +10,8 @@ export class LlHero extends LitElement {
         Video,
         Keyboard,
         X
-      }
+      },
+      root: this
     });
   }
   createRenderRoot() {
