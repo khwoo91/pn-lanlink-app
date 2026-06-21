@@ -510,7 +510,7 @@ export class MyElement extends LitElement {
                 <div class="space-y-1">
                   <span class="text-xs text-slate-500 font-bold uppercase tracking-wider">로컬 접속 공유 링크</span>
                   <div class="flex items-center gap-2">
-                    <div class="bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 px-3 py-2.5 rounded-xl flex-grow font-mono text-xs text-slate-600 dark:text-slate-300 break-all select-all">
+                    <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2.5 rounded-xl flex-grow font-mono text-xs text-slate-600 dark:text-slate-300 break-all select-all">
                       http://192.168.1.45:8080/join/LNK-992-81
                     </div>
                     <button @click=${() => this.copyToClipboard('http://192.168.1.45:8080/join/LNK-992-81')} class="p-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#1a73e8] text-slate-500 rounded-lg transition" title="링크 복사">
@@ -648,7 +648,7 @@ export class MyElement extends LitElement {
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
             '실시간 고화질 화면 및 음성 동시 녹화', '비밀번호 세션 잠금', '초저지연 보이스 토크' 기능은 정식 런칭 시 Pro 패키지로 분류됩니다.
           </p>
-          <div class="my-6 bg-slate-50 dark:bg-slate-955 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-left space-y-2.5">
+          <div class="my-6 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-left space-y-2.5">
             <div class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
               <i data-lucide="check" class="w-4 h-4 text-amber-500"></i> 오디오와 미디어가 자동 정렬되는 60FPS 회의 녹화
             </div>

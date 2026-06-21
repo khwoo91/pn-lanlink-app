@@ -56,23 +56,23 @@ export class LlHero extends LitElement {
             </div>
 
             <div class="grid grid-cols-2 gap-3 text-xs text-slate-700 dark:text-slate-300">
-              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
+              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
                 <input type="checkbox" id="toggle-control" class="accent-[#1a73e8]" checked>
                 <span>원격 제어 허용</span>
               </label>
-              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
+              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
                 <input type="checkbox" id="toggle-draw" class="accent-[#1a73e8]" checked>
                 <span>낙서 필기 허용</span>
               </label>
-              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
+              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
                 <input type="checkbox" id="toggle-voice" class="accent-[#1a73e8]" checked>
                 <span>음성 보이스 VoIP</span>
               </label>
-              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
+              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
                 <input type="checkbox" id="toggle-lock" @change=${this.onToggleLock} class="accent-[#1a73e8]" ?checked=${this.isRoomLocked}>
                 <span>비밀번호 잠금</span>
               </label>
-              <label class="col-span-2 flex items-center gap-2 p-2 bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
+              <label class="col-span-2 flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
                 <input type="checkbox" id="toggle-record" class="accent-[#1a73e8]" checked>
                 <span>회의 녹화 활성화 <span class="text-[9px] text-amber-500 font-bold ml-1">PRO</span></span>
               </label>
@@ -81,7 +81,7 @@ export class LlHero extends LitElement {
             <!-- Password configuration -->
             <div id="password-setup-container" class="${this.isRoomLocked ? '' : 'hidden'} space-y-1">
               <span class="text-[11px] text-slate-500 font-semibold">입장 비밀번호</span>
-              <input type="password" id="host-password-input" .value=${this.hostPassword} class="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:border-[#1a73e8] font-mono text-slate-800 dark:text-white">
+              <input type="password" id="host-password-input" .value=${this.hostPassword} class="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:border-[#1a73e8] font-mono text-slate-800 dark:text-white">
             </div>
 
             <button @click=${this.onStartSharing} class="w-full bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-bold py-2.5 rounded-lg transition-colors">

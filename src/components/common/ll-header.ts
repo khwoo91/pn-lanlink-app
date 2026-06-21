@@ -44,10 +44,10 @@ export class LlHeader extends LitElement {
               <button @click=${() => this.onThemeChange('light')} class="p-1.5 rounded-md transition ${this.currentTheme === 'light' ? 'bg-white dark:bg-slate-950 text-[#1a73e8] shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'}" title="밝은 테마">
                 <i data-lucide="sun" class="w-3.5 h-3.5"></i>
               </button>
-              <button @click=${() => this.onThemeChange('dark')} class="p-1.5 rounded-md transition ${this.currentTheme === 'dark' ? 'bg-white dark:bg-slate-955 text-[#1a73e8] shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'}" title="어두운 테마">
+              <button @click=${() => this.onThemeChange('dark')} class="p-1.5 rounded-md transition ${this.currentTheme === 'dark' ? 'bg-white dark:bg-slate-950 text-[#1a73e8] shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'}" title="어두운 테마">
                 <i data-lucide="moon" class="w-3.5 h-3.5"></i>
               </button>
-              <button @click=${() => this.onThemeChange('system')} class="p-1.5 rounded-md transition ${this.currentTheme === 'system' ? 'bg-white dark:bg-slate-955 text-[#1a73e8] shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'}" title="시스템 테마 연동">
+              <button @click=${() => this.onThemeChange('system')} class="p-1.5 rounded-md transition ${this.currentTheme === 'system' ? 'bg-white dark:bg-slate-950 text-[#1a73e8] shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'}" title="시스템 테마 연동">
                 <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
               </button>
             </div>

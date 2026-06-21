@@ -41,7 +41,7 @@ export class LlViewer extends LitElement {
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
           <!-- Left: 16:9 Screen Capturer Screen (8/12) -->
           <div class="xl:col-span-8 flex flex-col space-y-4">
-            <div class="relative bg-slate-900 dark:bg-slate-955 rounded-2xl border border-slate-200 dark:border-slate-800 aspect-video overflow-hidden group flex items-center justify-center">
+            <div class="relative bg-slate-900 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 aspect-video overflow-hidden group flex items-center justify-center">
               
               <!-- Mock visual diagrams -->
               <svg class="absolute inset-0 w-full h-full opacity-40" viewBox="0 0 800 450" fill="none" xmlns="http://www.w3.org/2000/svg">
