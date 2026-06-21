@@ -13,6 +13,27 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* 드래그(선택) 영역 스타일 */
+::selection {
+  background-color: #bfdbfe; /* 연한 파란색 배경 (라이트모드) */
+  color: #1b365d;            /* 어두운 파란색 텍스트 */
+}
+
+.dark ::selection {
+  background-color: #1e40af; /* 짙은 파란색 배경 (다크모드) */
+  color: #eff6ff;            /* 밝은 파란색 텍스트 */
+}
+
+/* 클릭 요소 전역 포인터 지정 */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+[role="button"],
+.clickable-item {
+  cursor: pointer;
+}
+
 :root {
   color-scheme: light dark;
   background-color: #ffffff;
