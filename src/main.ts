@@ -440,6 +440,7 @@ export class MyElement extends LitElement {
           <div id="landing-grid-container" class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             
             <ll-hero
+              class="lg:col-span-6 block"
               .hostSetupOpen=${this.hostSetupOpen}
               .isRoomLocked=${this.isRoomLocked}
               .hostPassword=${'1234'}
@@ -450,16 +451,16 @@ export class MyElement extends LitElement {
             ></ll-hero>
 
             <ll-carousel
+              class="lg:col-span-6 block"
               .carouselIndex=${this.carouselIndex}
               @switch-carousel=${this.onSwitchCarousel}
             ></ll-carousel>
 
-            <div class="lg:col-span-6">
-              <ll-mdns-list
-                .rooms=${this.scannedRooms}
-                @select-room=${this.onSelectRoom}
-              ></ll-mdns-list>
-            </div>
+            <ll-mdns-list
+              class="lg:col-span-6 block"
+              .rooms=${this.scannedRooms}
+              @select-room=${this.onSelectRoom}
+            ></ll-mdns-list>
           </div>
         ` : ''}
 

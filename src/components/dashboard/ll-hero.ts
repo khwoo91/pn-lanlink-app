@@ -16,7 +16,7 @@ export class LlHero extends LitElement {
 
   render() {
     return html`
-      <div class="lg:col-span-6 space-y-8">
+      <div class="space-y-8">
         <div class="space-y-4">
           <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.15]">
             안전하고 자유로운 <br class="hidden md:inline">

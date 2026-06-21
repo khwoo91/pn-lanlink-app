@@ -26,7 +26,7 @@ export class LlCarousel extends LitElement {
 
   render() {
     return html`
-      <div id="landing-visual-panel" class="lg:col-span-6 flex flex-col items-center justify-center text-center">
+      <div id="landing-visual-panel" class="flex flex-col items-center justify-center text-center">
         <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 max-w-md w-full custom-shadow space-y-6">
           
           <div class="w-48 h-48 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto relative">
