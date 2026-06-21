@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit';
 import { customElement, state, query } from 'lit/decorators.js';
-import { createIcons, Users, Copy, Lock, Square, Info, Crown } from 'lucide';
+import { createIcons, Users, Copy, Lock, Square, Info, Crown, ShieldAlert } from 'lucide';
 
 // Import components to register them as custom elements
 import './components/common/ll-header';
@@ -32,7 +32,8 @@ export class MyElement extends LitElement {
         Lock,
         Square,
         Info,
-        Crown
+        Crown,
+        ShieldAlert
       }
     });
   }
