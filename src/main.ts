@@ -52,6 +52,7 @@ export class MyElement extends LitElement {
   // Active room details
   @state() private activeRoomName: string = '';
   @state() private activeRoomIp: string = '';
+  @state() private activeRoomCode: string = 'LNK-992-81';
 
   // Chatting message logs
   @state() private chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [
@@ -94,13 +95,23 @@ export class MyElement extends LitElement {
     // Load local storage states via storage utility
     this.currentTheme = getTheme();
     this.applyTheme(this.currentTheme);
-    this.currentNickname = getNickname();
+    this.currentNickname = getNickname() || '참여자';
 
     // Trigger local scan simulation
     this.scanRooms();
 
     // Start auto carousel cycling every 5 seconds
     this.startCarouselInterval();
+
+    // URL 파라미터 체크 (?room=LNK-XXX-XX)
+    const params = new URLSearchParams(window.location.search);
+    const roomParam = params.get('room');
+    if (roomParam) {
+      setTimeout(() => {
+        this.showToast(`🔗 공유방 링크 감지: ${roomParam}번 방에 입장을 시도합니다.`);
+        this.checkPasswordAndJoin(`공유 회의방 (${roomParam})`, '192.168.1.99', true);
+      }, 800);
+    }
   }
 
   disconnectedCallback() {
@@ -193,8 +204,23 @@ export class MyElement extends LitElement {
   }
 
   // --- Broadcast (Host Mode) Simulation ---
+  private generateRoomCode(): string {
+    const num1 = Math.floor(100 + Math.random() * 900);
+    const num2 = Math.floor(10 + Math.random() * 90);
+    return `LNK-${num1}-${num2}`;
+  }
+
+  private getShareUrl(): string {
+    const origin = window.location.origin;
+    const path = window.location.pathname; // 예: /pn-lanlink-app/
+    return `${origin}${path}?room=${this.activeRoomCode}`;
+  }
+
   private async onStartSharing(e: CustomEvent<{ password: string }>) {
     this.hostPasswordHash = hashPassword(e.detail.password || '1234');
+
+    // Generate dynamic room code
+    this.activeRoomCode = this.generateRoomCode();
 
     // Simulate real screen capture stream
     this.screenStream = await captureScreen();
@@ -481,27 +507,11 @@ export class MyElement extends LitElement {
           <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
             <div
               class="md:col-span-4 bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center shadow-inner">
-              <div class="bg-slate-950 dark:bg-white p-2 rounded-xl mb-3">
-                <svg class="w-24 h-24 text-white dark:text-slate-950" viewBox="0 0 100 100" fill="currentColor">
-                  <rect x="0" y="0" width="25" height="25" />
-                  <rect x="5" y="5" width="15" height="15" fill="none" class="text-slate-950 dark:text-white"
-                    stroke="currentColor" stroke-width="4" />
-                  <rect x="10" y="10" width="5" height="5" />
-                  <rect x="75" y="0" width="25" height="25" />
-                  <rect x="80" y="5" width="15" height="15" fill="none" class="text-slate-950 dark:text-white"
-                    stroke="currentColor" stroke-width="4" />
-                  <rect x="85" y="10" width="5" height="5" />
-                  <rect x="0" y="75" width="25" height="25" />
-                  <rect x="5" y="80" width="15" height="15" fill="none" class="text-slate-950 dark:text-white"
-                    stroke="currentColor" stroke-width="4" />
-                  <rect x="10" y="85" width="5" height="5" />
-                  <rect x="35" y="10" width="10" height="5" />
-                  <rect x="55" y="20" width="5" height="15" />
-                  <rect x="30" y="45" width="20" height="5" />
-                </svg>
+              <div class="bg-white p-2 rounded-xl mb-3 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(this.getShareUrl())}" class="w-24 h-24 rounded-lg" alt="Share QR Code" />
               </div>
               <span class="text-xs text-slate-400">모바일 / 태블릿 간편 QR</span>
-              <div class="mt-1 text-md font-bold text-google-blue tracking-wider">LNK-992-81</div>
+              <div class="mt-1 text-md font-bold text-google-blue tracking-wider">${this.activeRoomCode}</div>
             </div>
       
             <div class="md:col-span-8 flex flex-col justify-between space-y-4">
@@ -510,9 +520,9 @@ export class MyElement extends LitElement {
                 <div class="flex items-center gap-2">
                   <div
                     class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2.5 rounded-xl grow font-mono text-xs text-slate-600 dark:text-slate-300 break-all select-all">
-                    http://192.168.1.45:8080/join/LNK-992-81
+                    ${this.getShareUrl()}
                   </div>
-                  <button @click=${() => this.copyToClipboard('http://192.168.1.45:8080/join/LNK-992-81')} class="p-2.5
+                  <button @click=${() => this.copyToClipboard(this.getShareUrl())} class="p-2.5
                     bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-google-blue
                     text-slate-500 rounded-lg transition" title="링크 복사">
                     <i data-lucide="copy" class="w-4 h-4"></i>
