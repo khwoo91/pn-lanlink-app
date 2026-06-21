@@ -1,5 +1,5 @@
 import { LitElement, html } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { createIcons } from 'lucide';
 import { globalIcons } from '../../utils/icons';
 
@@ -22,6 +22,12 @@ export class LlViewer extends LitElement {
   @property({ type: Boolean }) cursorVisible = false;
   @property({ type: Number }) cursorX = 33;
   @property({ type: Number }) cursorY = 50;
+
+  @state() private isPlaying = false;
+
+  private startPlayback() {
+    this.isPlaying = true;
+  }
 
   render() {
     const isChulsoo = this.activeRoomName.includes('김철수');
@@ -51,26 +57,38 @@ export class LlViewer extends LitElement {
           <div class="xl:col-span-8 flex flex-col space-y-4">
             <div class="relative bg-slate-900 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 aspect-video overflow-hidden group flex items-center justify-center">
               
-              <!-- Mock visual diagrams -->
-              <svg class="absolute inset-0 w-full h-full opacity-40" viewBox="0 0 800 450" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="20" y="20" width="200" height="15" rx="4" fill="#1a73e8"/>
-                <rect x="20" y="45" width="340" height="12" rx="4" fill="#475569" class="dark:fill-[#334155]"/>
-                <rect x="40" y="70" width="180" height="12" rx="4" fill="#475569" class="dark:fill-[#334155]"/>
-                <rect x="60" y="95" width="260" height="12" rx="4" fill="#475569" class="dark:fill-[#334155]"/>
-                
-                <rect x="420" y="40" width="340" height="200" rx="12" fill="#e2e8f0" class="dark:fill-[#1E293B]" stroke="#94a3b8" class="dark:stroke-[#334155]" stroke-width="2"/>
-                <circle cx="590" cy="140" r="40" fill="#1a73e8" fill-opacity="0.2" stroke="#1a73e8" stroke-width="3"/>
-                <rect x="460" y="70" width="80" height="15" rx="4" fill="#1a73e8"/>
-                <path d="M0 225H800M400 0V450" stroke="#94a3b8" stroke-opacity="0.2"/>
-              </svg>
+              <!-- Video Stream player (Shows when isPlaying is true) -->
+              ${this.isPlaying ? html`
+                <video 
+                  class="absolute inset-0 w-full h-full object-cover z-0" 
+                  src="https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-his-computer-34315-large.mp4" 
+                  autoplay 
+                  loop 
+                  muted 
+                  playsinline
+                ></video>
+              ` : html`
+                <!-- Mock visual diagrams -->
+                <svg class="absolute inset-0 w-full h-full opacity-40 z-0" viewBox="0 0 800 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="20" y="20" width="200" height="15" rx="4" fill="#1a73e8"/>
+                  <rect x="20" y="45" width="340" height="12" rx="4" fill="#475569" class="dark:fill-[#334155]"/>
+                  <rect x="40" y="70" width="180" height="12" rx="4" fill="#475569" class="dark:fill-[#334155]"/>
+                  <rect x="60" y="95" width="260" height="12" rx="4" fill="#475569" class="dark:fill-[#334155]"/>
+                  
+                  <rect x="420" y="40" width="340" height="200" rx="12" fill="#e2e8f0" class="dark:fill-[#1E293B]" stroke="#94a3b8" class="dark:stroke-[#334155]" stroke-width="2"/>
+                  <circle cx="590" cy="140" r="40" fill="#1a73e8" fill-opacity="0.2" stroke="#1a73e8" stroke-width="3"/>
+                  <rect x="460" y="70" width="80" height="15" rx="4" fill="#1a73e8"/>
+                  <path d="M0 225H800M400 0V450" stroke="#94a3b8" stroke-opacity="0.2"/>
+                </svg>
+              `}
 
               <!-- Remote cursor marker -->
-              <div id="cursor-indicator" class="${this.cursorVisible ? '' : 'hidden'} absolute bg-google-blue border border-blue-400 px-2 py-1 rounded-md text-xs text-white flex items-center gap-1.5 shadow-lg select-none pointer-events-none" style="top: ${this.cursorY}%; left: ${this.cursorX}%;">
+              <div id="cursor-indicator" class="${this.cursorVisible ? '' : 'hidden'} absolute bg-google-blue border border-blue-400 px-2 py-1 rounded-md text-xs text-white flex items-center gap-1.5 shadow-lg select-none pointer-events-none z-20" style="top: ${this.cursorY}%; left: ${this.cursorX}%;">
                 <i data-lucide="pointer" class="w-3.5 h-3.5 text-white"></i> 제어자 커서 (조종 중)
               </div>
 
               <!-- Annotation overlays -->
-              <div id="annotation-mock" class="${this.annotationVisible ? '' : 'hidden'} absolute inset-0 bg-transparent pointer-events-none">
+              <div id="annotation-mock" class="${this.annotationVisible ? '' : 'hidden'} absolute inset-0 bg-transparent pointer-events-none z-20">
                 <svg class="w-full h-full text-amber-500" viewBox="0 0 800 450" fill="none">
                   <path d="M 550 140 C 530 80, 650 60, 600 150" stroke="#F59E0B" stroke-width="4" stroke-linecap="round" fill="none"/>
                   <text x="500" y="220" fill="#D97706" class="dark:fill-[#F59E0B]" font-size="14" font-weight="bold">이 구 영역 레이아웃 확인 필요!</text>
@@ -78,7 +96,7 @@ export class LlViewer extends LitElement {
               </div>
 
               <!-- VoIP audio active waves -->
-              <div id="voice-wave-container" class="${!this.localMuted ? '' : 'hidden'} absolute top-4 left-4 bg-slate-950/80 border border-blue-500/30 px-3 py-2 rounded-lg flex items-center gap-3">
+              <div id="voice-wave-container" class="${!this.localMuted ? '' : 'hidden'} absolute top-4 left-4 bg-slate-950/80 border border-blue-500/30 px-3 py-2 rounded-lg flex items-center gap-3 z-20">
                 <div class="flex items-end gap-1 h-6">
                   <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.1s"></div>
                   <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.4s"></div>
@@ -89,14 +107,16 @@ export class LlViewer extends LitElement {
                 <span class="text-xs text-google-blue font-bold tracking-tight">LAN 보이스 음성 연결됨</span>
               </div>
 
-              <div class="relative text-center p-8 z-10">
-                <div class="inline-flex p-3 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 mb-3 group-hover:scale-105 transition-all shadow-md">
+              <!-- Play overlay (Shows when not playing) -->
+              <div @click=${this.startPlayback} class="${this.isPlaying ? 'opacity-0 pointer-events-none scale-95' : 'opacity-100 scale-100'} absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-8 z-10 transition-all duration-300 cursor-pointer">
+                <div class="inline-flex p-3 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 mb-3 hover:scale-110 active:scale-95 transition-all shadow-md">
                   <i data-lucide="play-circle" class="w-10 h-10 text-google-blue"></i>
                 </div>
-                <h4 class="text-sm font-semibold text-slate-800 dark:text-slate-200">실시간 화면 캡처 수신 완료</h4>
-                <p class="text-xs text-slate-500 mt-1">로컬 미디어 파이프가 WebRTC 오디오·비디오를 연동 중</p>
+                <h4 class="text-sm font-semibold text-white">실시간 화면 캡처 수신 완료</h4>
+                <p class="text-xs text-slate-300 mt-1">플레이 버튼을 눌러 WebRTC 라이브 화면 시청을 시작하세요</p>
               </div>
             </div>
+
 
             <!-- Mute, click, draw buttons -->
             <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80">
