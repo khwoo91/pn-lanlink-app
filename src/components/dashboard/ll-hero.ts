@@ -30,7 +30,7 @@ export class LlHero extends LitElement {
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <!-- Open host room setup -->
-            <button @click=${this.onToggleHostSetupDrawer} class="bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold py-3 px-5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm text-sm">
+            <button @click=${this.onToggleHostSetupDrawer} class="bg-google-blue hover:bg-google-blueHover text-white font-bold py-3 px-5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm text-sm">
               <i data-lucide="video" class="w-4 h-4 fill-white"></i> 새 공유방 개설
             </button>
 
@@ -39,11 +39,11 @@ export class LlHero extends LitElement {
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <i data-lucide="keyboard" class="w-4 h-4"></i>
               </div>
-              <input type="text" id="join-code-input" placeholder="코드 또는 링크 입력" class="w-full pl-9 pr-3 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-[#1a73e8] dark:focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] transition-all">
+              <input type="text" id="join-code-input" placeholder="코드 또는 링크 입력" class="w-full pl-9 pr-3 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-google-blue dark:focus:border-google-blue focus:ring-1 focus:ring-google-blue transition-all">
             </div>
 
             <!-- Join room button -->
-            <button @click=${this.onJoinRoom} class="text-slate-500 dark:text-slate-400 hover:text-[#1a73e8] font-bold text-sm px-4 py-3 transition">
+            <button @click=${this.onJoinRoom} class="text-slate-500 dark:text-slate-400 hover:text-google-blue font-bold text-sm px-4 py-3 transition">
               참여
             </button>
           </div>
@@ -56,35 +56,35 @@ export class LlHero extends LitElement {
             </div>
 
             <div class="grid grid-cols-2 gap-3 text-xs text-slate-700 dark:text-slate-300">
-              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
-                <input type="checkbox" id="toggle-control" class="accent-[#1a73e8]" checked>
+              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-google-blue transition">
+                <input type="checkbox" id="toggle-control" class="accent-google-blue" checked>
                 <span>원격 제어 허용</span>
               </label>
-              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
-                <input type="checkbox" id="toggle-draw" class="accent-[#1a73e8]" checked>
+              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-google-blue transition">
+                <input type="checkbox" id="toggle-draw" class="accent-google-blue" checked>
                 <span>낙서 필기 허용</span>
               </label>
-              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
-                <input type="checkbox" id="toggle-voice" class="accent-[#1a73e8]" checked>
+              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-google-blue transition">
+                <input type="checkbox" id="toggle-voice" class="accent-google-blue" checked>
                 <span>음성 보이스 VoIP</span>
               </label>
-              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
-                <input type="checkbox" id="toggle-lock" @change=${this.onToggleLock} class="accent-[#1a73e8]" ?checked=${this.isRoomLocked}>
+              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-google-blue transition">
+                <input type="checkbox" id="toggle-lock" @change=${this.onToggleLock} class="accent-google-blue" ?checked=${this.isRoomLocked}>
                 <span>비밀번호 잠금</span>
               </label>
-              <label class="col-span-2 flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-[#1a73e8] transition">
-                <input type="checkbox" id="toggle-record" class="accent-[#1a73e8]" checked>
+              <label class="col-span-2 flex items-center gap-2 p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:border-google-blue transition">
+                <input type="checkbox" id="toggle-record" class="accent-google-blue" checked>
                 <span>회의 녹화 활성화 <span class="text-[9px] text-amber-500 font-bold ml-1">PRO</span></span>
               </label>
             </div>
 
             <!-- Password configuration -->
             <div id="password-setup-container" class="${this.isRoomLocked ? '' : 'hidden'} space-y-1">
-              <span class="text-[11px] text-slate-500 font-semibold">입장 비밀번호</span>
-              <input type="password" id="host-password-input" .value=${this.hostPassword} class="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:border-[#1a73e8] font-mono text-slate-800 dark:text-white">
+              <span class="text-xs text-slate-500 font-semibold">입장 비밀번호</span>
+              <input type="password" id="host-password-input" .value=${this.hostPassword} class="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:border-google-blue font-mono text-slate-800 dark:text-white">
             </div>
 
-            <button @click=${this.onStartSharing} class="w-full bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-bold py-2.5 rounded-lg transition-colors">
+            <button @click=${this.onStartSharing} class="w-full bg-google-blue hover:bg-google-blueHover text-white text-xs font-bold py-2.5 rounded-lg transition-colors">
               구성 완료 및 공유 시작
             </button>
           </div>

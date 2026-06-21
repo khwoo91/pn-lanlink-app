@@ -479,8 +479,8 @@ export class MyElement extends LitElement {
                 </div>
               </div>
               <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs">
-                <i data-lucide="users" class="w-4 h-4 text-[#1a73e8]"></i>
-                <span class="text-slate-600 dark:text-slate-300 font-semibold">참여자: <span id="viewer-count" class="text-[#1a73e8]">${this.viewerCount}</span>명</span>
+                <i data-lucide="users" class="w-4 h-4 text-google-blue"></i>
+                <span class="text-slate-600 dark:text-slate-300 font-semibold">참여자: <span id="viewer-count" class="text-google-blue">${this.viewerCount}</span>명</span>
               </div>
             </div>
 
@@ -502,8 +502,8 @@ export class MyElement extends LitElement {
                     <rect x="30" y="45" width="20" height="5"/>
                   </svg>
                 </div>
-                <span class="text-[10px] text-slate-400">모바일 / 태블릿 간편 QR</span>
-                <div class="mt-1 text-md font-bold text-[#1a73e8] tracking-wider">LNK-992-81</div>
+                <span class="text-xs text-slate-400">모바일 / 태블릿 간편 QR</span>
+                <div class="mt-1 text-md font-bold text-google-blue tracking-wider">LNK-992-81</div>
               </div>
 
               <div class="md:col-span-8 flex flex-col justify-between space-y-4">
@@ -513,14 +513,14 @@ export class MyElement extends LitElement {
                     <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2.5 rounded-xl flex-grow font-mono text-xs text-slate-600 dark:text-slate-300 break-all select-all">
                       http://192.168.1.45:8080/join/LNK-992-81
                     </div>
-                    <button @click=${() => this.copyToClipboard('http://192.168.1.45:8080/join/LNK-992-81')} class="p-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#1a73e8] text-slate-500 rounded-lg transition" title="링크 복사">
+                    <button @click=${() => this.copyToClipboard('http://192.168.1.45:8080/join/LNK-992-81')} class="p-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-google-blue text-slate-500 rounded-lg transition" title="링크 복사">
                       <i data-lucide="copy" class="w-4 h-4"></i>
                     </button>
                   </div>
                 </div>
 
-                <div class="bg-[#1a73e8]/5 p-4 rounded-xl border border-[#1a73e8]/10 text-xs text-slate-500 space-y-1">
-                  <p class="font-bold text-[#1a73e8] flex items-center gap-1">
+                <div class="bg-google-blue/5 p-4 rounded-xl border border-google-blue/10 text-xs text-slate-500 space-y-1">
+                  <p class="font-bold text-google-blue flex items-center gap-1">
                     <i data-lucide="lock" class="w-3.5 h-3.5"></i> 종단간 보안 기밀 보호 작동 중
                   </p>
                   <p class="text-[11px] leading-relaxed">
@@ -528,10 +528,10 @@ export class MyElement extends LitElement {
                   </p>
                 </div>
 
-                <div class="flex flex-col sm:flex-row gap-2 pt-2 justify-between items-center border-t border-slate-200 dark:border-slate-800 pt-3 text-[11px]">
+                <div class="flex flex-col sm:flex-row gap-2 pt-2 justify-between items-center border-t border-slate-200 dark:border-slate-800 pt-3 text-xs">
                   <div class="flex items-center gap-1.5 text-slate-400">
                     <span>테스트 기능:</span>
-                    <button @click=${this.simulateIdleTrigger} class="text-[#1a73e8] dark:text-[#1a73e8] hover:underline font-bold">
+                    <button @click=${this.simulateIdleTrigger} class="text-google-blue dark:text-google-blue hover:underline font-bold">
                       미접속 30분 초과 연출 ⚡
                     </button>
                   </div>
@@ -609,7 +609,7 @@ export class MyElement extends LitElement {
     return html`
       <div id="nickname-modal" class="${this.nicknameModalOpen ? '' : 'hidden'} fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
-          <div class="w-12 h-12 bg-[#1a73e8]/10 border border-[#1a73e8]/20 text-[#1a73e8] rounded-full flex items-center justify-center mx-auto mb-3">
+          <div class="w-12 h-12 bg-google-blue/10 border border-google-blue/20 text-google-blue rounded-full flex items-center justify-center mx-auto mb-3">
             <i data-lucide="user-plus" class="w-6 h-6"></i>
           </div>
           <h3 class="text-md font-bold text-center text-slate-800 dark:text-white">사내 대화명 설정</h3>
@@ -618,14 +618,14 @@ export class MyElement extends LitElement {
           </p>
 
           <div class="my-4">
-            <input type="text" id="input-guest-nickname" .value=${this.tempNicknameInput} placeholder="예: 김 대리 (개발팀)" class="w-full text-center py-2.5 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:border-[#1a73e8] focus:outline-none font-semibold text-sm text-slate-800 dark:text-white">
+            <input type="text" id="input-guest-nickname" .value=${this.tempNicknameInput} placeholder="예: 김 대리 (개발팀)" class="w-full text-center py-2.5 bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl focus:border-google-blue focus:outline-none font-semibold text-sm text-slate-800 dark:text-white">
           </div>
 
           <div class="flex gap-2">
             <button @click=${this.closeNicknameModal} class="flex-grow bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-xl text-xs transition">
               취소
             </button>
-            <button @click=${this.submitNickname} class="flex-grow bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold py-2.5 rounded-xl text-xs transition">
+            <button @click=${this.submitNickname} class="flex-grow bg-google-blue hover:bg-google-blueHover text-white font-bold py-2.5 rounded-xl text-xs transition">
               대화명 저장 및 입장
             </button>
           </div>
@@ -675,7 +675,7 @@ export class MyElement extends LitElement {
   private renderToast() {
     return html`
       <div id="toast" class="transition-all duration-300 ${this.toastVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'} fixed bottom-6 right-6 z-50 bg-white dark:bg-slate-900 border border-blue-500 text-slate-800 dark:text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 text-sm">
-        <i data-lucide="info" class="w-4 h-4 text-[#1a73e8]"></i>
+        <i data-lucide="info" class="w-4 h-4 text-google-blue"></i>
         <span id="toast-message">${this.toastMessage}</span>
       </div>
     `;

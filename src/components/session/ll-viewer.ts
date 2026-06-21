@@ -28,7 +28,7 @@ export class LlViewer extends LitElement {
             </h3>
           </div>
           <div class="flex items-center gap-2 text-xs">
-            <span id="badge-control" class="${isChulsoo ? '' : 'hidden'} bg-[#1a73e8]/10 text-[#1a73e8] px-2.5 py-1 rounded-md border border-[#1a73e8]/20 font-semibold">
+            <span id="badge-control" class="${isChulsoo ? '' : 'hidden'} bg-google-blue/10 text-google-blue px-2.5 py-1 rounded-md border border-google-blue/20 font-semibold">
               <i data-lucide="mouse-pointer" class="inline w-3 h-3 mr-1"></i> 원격제어
             </span>
             <span id="badge-draw" class="${isChulsoo ? '' : 'hidden'} bg-amber-500/10 text-amber-600 px-2.5 py-1 rounded-md border border-amber-500/20 font-semibold">
@@ -57,7 +57,7 @@ export class LlViewer extends LitElement {
               </svg>
 
               <!-- Remote cursor marker -->
-              <div id="cursor-indicator" class="${this.cursorVisible ? '' : 'hidden'} absolute bg-[#1a73e8] border border-blue-400 px-2 py-1 rounded-md text-[10px] text-white flex items-center gap-1.5 shadow-lg select-none pointer-events-none" style="top: ${this.cursorY}%; left: ${this.cursorX}%;">
+              <div id="cursor-indicator" class="${this.cursorVisible ? '' : 'hidden'} absolute bg-google-blue border border-blue-400 px-2 py-1 rounded-md text-xs text-white flex items-center gap-1.5 shadow-lg select-none pointer-events-none" style="top: ${this.cursorY}%; left: ${this.cursorX}%;">
                 <i data-lucide="pointer" class="w-3.5 h-3.5 text-white"></i> 제어자 커서 (조종 중)
               </div>
 
@@ -72,18 +72,18 @@ export class LlViewer extends LitElement {
               <!-- VoIP audio active waves -->
               <div id="voice-wave-container" class="${!this.localMuted ? '' : 'hidden'} absolute top-4 left-4 bg-slate-950/80 border border-blue-500/30 px-3 py-2 rounded-lg flex items-center gap-3">
                 <div class="flex items-end gap-1 h-6">
-                  <div class="audio-wave-bar w-1 bg-[#1a73e8]" style="animation-delay: 0.1s"></div>
-                  <div class="audio-wave-bar w-1 bg-[#1a73e8]" style="animation-delay: 0.4s"></div>
-                  <div class="audio-wave-bar w-1 bg-[#1a73e8]" style="animation-delay: 0.2s"></div>
-                  <div class="audio-wave-bar w-1 bg-[#1a73e8]" style="animation-delay: 0.6s"></div>
-                  <div class="audio-wave-bar w-1 bg-[#1a73e8]" style="animation-delay: 0.3s"></div>
+                  <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.1s"></div>
+                  <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.4s"></div>
+                  <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.2s"></div>
+                  <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.6s"></div>
+                  <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.3s"></div>
                 </div>
-                <span class="text-xs text-[#1a73e8] font-bold tracking-tight">LAN 보이스 음성 연결됨</span>
+                <span class="text-xs text-google-blue font-bold tracking-tight">LAN 보이스 음성 연결됨</span>
               </div>
 
               <div class="relative text-center p-8 z-10">
                 <div class="inline-flex p-3 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 mb-3 group-hover:scale-105 transition-all shadow-md">
-                  <i data-lucide="play-circle" class="w-10 h-10 text-[#1a73e8]"></i>
+                  <i data-lucide="play-circle" class="w-10 h-10 text-google-blue"></i>
                 </div>
                 <h4 class="text-sm font-semibold text-slate-800 dark:text-slate-200">실시간 화면 캡처 수신 완료</h4>
                 <p class="text-xs text-slate-500 mt-1">로컬 미디어 파이프가 WebRTC 오디오·비디오를 연동 중</p>
@@ -97,7 +97,7 @@ export class LlViewer extends LitElement {
                 <button id="btn-audio-toggle" @click=${this.onToggleMute} class="text-xs ${this.localMuted ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'} border hover:bg-opacity-20 px-3 py-2 rounded-lg font-bold transition flex items-center gap-1.5">
                   <i data-lucide="mic" class="w-3.5 h-3.5"></i> ${this.localMuted ? '마이크 음소거 해제' : '마이크 끄기'}
                 </button>
-                <button @click=${this.onSimulateClick} id="btn-action-control" class="${isChulsoo ? '' : 'hidden'} text-xs bg-[#1a73e8]/10 border border-[#1a73e8]/20 text-[#1a73e8] hover:bg-[#1a73e8] hover:text-white px-3 py-2 rounded-lg font-bold transition">
+                <button @click=${this.onSimulateClick} id="btn-action-control" class="${isChulsoo ? '' : 'hidden'} text-xs bg-google-blue/10 border border-google-blue/20 text-google-blue hover:bg-google-blue hover:text-white px-3 py-2 rounded-lg font-bold transition">
                   <i data-lucide="mouse-pointer-click" class="inline w-3.5 h-3.5 mr-1"></i> 가상 원격 클릭
                 </button>
                 <button @click=${this.onToggleDraw} id="btn-action-draw" class="${isChulsoo ? '' : 'hidden'} text-xs bg-amber-500/10 border border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-white px-3 py-2 rounded-lg font-bold transition">
