@@ -1,8 +1,22 @@
 import { LitElement, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { createIcons, MousePointer, PenTool, Pointer, PlayCircle, Mic, MousePointerClick, Pencil } from 'lucide';
 
 @customElement('ll-viewer')
 export class LlViewer extends LitElement {
+  updated() {
+    createIcons({
+      icons: {
+        MousePointer,
+        PenTool,
+        Pointer,
+        PlayCircle,
+        Mic,
+        MousePointerClick,
+        Pencil
+      }
+    });
+  }
   createRenderRoot() {
     return this;
   }

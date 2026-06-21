@@ -1,8 +1,16 @@
 import { LitElement, html } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
+import { createIcons, ShieldAlert } from 'lucide';
 
 @customElement('modal-password')
 export class ModalPassword extends LitElement {
+  updated() {
+    createIcons({
+      icons: {
+        ShieldAlert
+      }
+    });
+  }
   createRenderRoot() {
     return this;
   }

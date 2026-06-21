@@ -1,5 +1,6 @@
 import { LitElement, html } from 'lit';
 import { customElement, state, query } from 'lit/decorators.js';
+import { createIcons, Users, Copy, Lock, Square, Info, Crown } from 'lucide';
 
 // Import components to register them as custom elements
 import './components/common/ll-header';
@@ -23,6 +24,18 @@ import type { LANRoom } from './infrastructure/mdns-signaling';
 
 @customElement('my-element')
 export class MyElement extends LitElement {
+  updated() {
+    createIcons({
+      icons: {
+        Users,
+        Copy,
+        Lock,
+        Square,
+        Info,
+        Crown
+      }
+    });
+  }
   // Use Light DOM for seamless styling via tailwind.css and global plugins
   createRenderRoot() {
     return this;

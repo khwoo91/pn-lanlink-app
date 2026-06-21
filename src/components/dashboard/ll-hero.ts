@@ -1,8 +1,18 @@
 import { LitElement, html } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
+import { createIcons, Video, Keyboard, X } from 'lucide';
 
 @customElement('ll-hero')
 export class LlHero extends LitElement {
+  updated() {
+    createIcons({
+      icons: {
+        Video,
+        Keyboard,
+        X
+      }
+    });
+  }
   createRenderRoot() {
     return this;
   }

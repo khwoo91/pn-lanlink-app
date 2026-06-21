@@ -54,9 +54,9 @@ export class LlCarousel extends LitElement {
       
           <!-- Carousel Indicators -->
           <div class="flex items-center justify-center space-x-1.5 pt-2">
-            <button @click=${()=> this.onSwitchCarousel(0)} id="carousel-dot-0" class="${this.carouselIndex === 0 ? 'w-2.5 h-2.5 bg-goggle-blue' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
-            <button @click=${()=> this.onSwitchCarousel(1)} id="carousel-dot-1" class="${this.carouselIndex === 1 ? 'w-2.5 h-2.5 bg-goggle-blue' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
-            <button @click=${()=> this.onSwitchCarousel(2)} id="carousel-dot-2" class="${this.carouselIndex === 2 ? 'w-2.5 h-2.5 bg-goggle-blue' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
+            <button @click=${()=> this.onSwitchCarousel(0)} id="carousel-dot-0" class="${this.carouselIndex === 0 ? 'w-2.5 h-2.5 bg-google-blue' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
+            <button @click=${()=> this.onSwitchCarousel(1)} id="carousel-dot-1" class="${this.carouselIndex === 1 ? 'w-2.5 h-2.5 bg-google-blue' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
+            <button @click=${()=> this.onSwitchCarousel(2)} id="carousel-dot-2" class="${this.carouselIndex === 2 ? 'w-2.5 h-2.5 bg-google-blue' : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'} rounded-full transition-all"></button>
           </div>
         </div>
       </div>

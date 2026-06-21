@@ -1,8 +1,16 @@
 import { LitElement, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { createIcons, ShieldAlert } from 'lucide';
 
 @customElement('modal-saver')
 export class ModalSaver extends LitElement {
+  updated() {
+    createIcons({
+      icons: {
+        ShieldAlert
+      }
+    });
+  }
   createRenderRoot() {
     return this;
   }
