@@ -47,7 +47,7 @@ export class LlHero extends LitElement {
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <i data-lucide="keyboard" class="w-4 h-4"></i>
               </div>
-              <input type="text" id="join-code-input" placeholder="코드 또는 링크 입력" class="w-full pl-9 pr-3 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-google-blue dark:focus:border-google-blue focus:ring-1 focus:ring-google-blue transition-all">
+              <input type="text" id="join-code-input" placeholder="방 번호(예: 15) 또는 링크 입력" class="w-full pl-9 pr-3 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-google-blue dark:focus:border-google-blue focus:ring-1 focus:ring-google-blue transition-all">
             </div>
 
             <!-- Join room button -->

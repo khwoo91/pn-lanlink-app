@@ -54,7 +54,7 @@ export class MyElement extends LitElement {
   // Active room details
   @state() private activeRoomName: string = '';
   @state() private activeRoomIp: string = '';
-  @state() private activeRoomCode: string = 'LNK-992-81';
+  @state() private activeRoomCode: string = '15';
 
   // Chatting message logs
   @state() private chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [
@@ -557,9 +557,8 @@ export class MyElement extends LitElement {
 
   // --- Broadcast (Host Mode) Simulation ---
   private generateRoomCode(): string {
-    const num1 = Math.floor(100 + Math.random() * 900);
-    const num2 = Math.floor(10 + Math.random() * 90);
-    return `LNK-${num1}-${num2}`;
+    // 10~99 사이의 외우기 쉬운 2자리 방 번호 생성
+    return String(Math.floor(10 + Math.random() * 90));
   }
 
   private getShareUrl(): string {
