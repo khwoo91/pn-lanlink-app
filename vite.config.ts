@@ -33,7 +33,7 @@ export default defineConfig({
         const wss = new WebSocketServer({ noServer: true });
         const localIp = getLocalIPv4();
 
-        server.httpServer.on('upgrade', (request, socket, head) => {
+        server.httpServer.on('upgrade', (request: any, socket: any, head: any) => {
           const url = new URL(request.url || '', `http://${request.headers.host}`);
           if (url.pathname === '/pn-lanlink-app/signaling') {
             wss.handleUpgrade(request, socket, head, (ws) => {
