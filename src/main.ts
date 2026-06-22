@@ -50,6 +50,7 @@ export class MyElement extends LitElement {
   @state() private scannedRooms: LANRoom[] = [];
   @state() private serverDetectedIp: string = '';
   @state() private pendingRoomJoinCode: string = '';
+  @state() private pendingRoomJoinIp: string = '';
 
   // Active room details
   @state() private activeRoomName: string = '';
@@ -117,12 +118,26 @@ export class MyElement extends LitElement {
 
     this.initWebSocketSignaling();
 
-    // URL 파라미터 체크 (?room=LNK-XXX-XX)
+    // URL 파라미터 체크 (?room=15&ip=192.168.0.27)
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get('room');
+    const ipParam = params.get('ip');
     if (roomParam) {
       this.pendingRoomJoinCode = roomParam;
+      this.pendingRoomJoinIp = ipParam || '';
       this.showToast(`🔗 공유방 링크 감지: 방 정보 확인 후 입장을 시도합니다.`);
+
+      // 1.5초 내에 공인 IP 대조 방 목록 응답이 지연되거나 실패할 시, 직접 IP 접속 폴백 수행
+      setTimeout(() => {
+        if (this.pendingRoomJoinCode) {
+          const code = this.pendingRoomJoinCode;
+          const ip = this.pendingRoomJoinIp;
+          this.pendingRoomJoinCode = '';
+          this.pendingRoomJoinIp = '';
+          this.showToast(`⚡ 네트워크 지연 발생: 직접 연결 주소(${ip || '로컬'})로 다이렉트 입장을 시도합니다.`);
+          this.checkPasswordAndJoin(`공유 회의방 (${code})`, ip || window.location.hostname, false);
+        }
+      }, 1500);
     }
   }
 
@@ -243,14 +258,16 @@ export class MyElement extends LitElement {
 
           if (this.pendingRoomJoinCode) {
             const code = this.pendingRoomJoinCode;
+            const fallbackIp = this.pendingRoomJoinIp;
             this.pendingRoomJoinCode = ''; // 1회만 자동입장 시도
+            this.pendingRoomJoinIp = '';
 
             const foundRoom = this.scannedRooms.find(r => r.code === code || r.ip === code || r.name.includes(code));
             if (foundRoom) {
               this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked);
             } else {
-              const isLocalHost = code === window.location.hostname || code === this.serverDetectedIp;
-              const targetIp = isLocalHost ? (this.serverDetectedIp || window.location.hostname) : code;
+              // 룸 목록에서 정확히 찾지 못했을 경우 링크에 동봉된 ipParam 주소를 우선 탑재하여 조인
+              const targetIp = fallbackIp || (code === window.location.hostname || code === this.serverDetectedIp ? (this.serverDetectedIp || window.location.hostname) : code);
               this.checkPasswordAndJoin(`공유 회의방 (${code})`, targetIp, false);
             }
           }
@@ -565,12 +582,12 @@ export class MyElement extends LitElement {
     if (this.serverDetectedIp) {
       // 로컬 개발 서버 포트가 있으면 사용하고, 없으면 기본 5173 포트 부여
       const port = window.location.port ? `:${window.location.port}` : ':5173';
-      return `http://${this.serverDetectedIp}${port}/pn-lanlink-app/?room=${this.activeRoomCode}`;
+      return `http://${this.serverDetectedIp}${port}/pn-lanlink-app/?room=${this.activeRoomCode}&ip=${this.serverDetectedIp}`;
     }
     const port = window.location.port ? `:${window.location.port}` : '';
     const protocol = window.location.protocol;
     const path = window.location.pathname; // 예: /pn-lanlink-app/
-    return `${protocol}//${window.location.hostname}${port}${path}?room=${this.activeRoomCode}`;
+    return `${protocol}//${window.location.hostname}${port}${path}?room=${this.activeRoomCode}&ip=${window.location.hostname}`;
   }
 
   private async onStartSharing(e: CustomEvent<{ password: string }>) {
