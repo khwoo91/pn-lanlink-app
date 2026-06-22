@@ -541,13 +541,15 @@ export class MyElement extends LitElement {
   }
 
   private getShareUrl(): string {
+    if (this.serverDetectedIp) {
+      // 로컬 개발 서버 포트가 있으면 사용하고, 없으면 기본 5173 포트 부여
+      const port = window.location.port ? `:${window.location.port}` : ':5173';
+      return `http://${this.serverDetectedIp}${port}/pn-lanlink-app/?room=${this.activeRoomCode}`;
+    }
     const port = window.location.port ? `:${window.location.port}` : '';
-    const host = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && this.serverDetectedIp
-      ? this.serverDetectedIp
-      : window.location.hostname;
     const protocol = window.location.protocol;
     const path = window.location.pathname; // 예: /pn-lanlink-app/
-    return `${protocol}//${host}${port}${path}?room=${this.activeRoomCode}`;
+    return `${protocol}//${window.location.hostname}${port}${path}?room=${this.activeRoomCode}`;
   }
 
   private async onStartSharing(e: CustomEvent<{ password: string }>) {
