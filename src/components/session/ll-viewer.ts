@@ -1,5 +1,5 @@
 import { LitElement, html } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 import { createIcons } from 'lucide';
 import { globalIcons } from '../../utils/icons';
 
@@ -22,12 +22,10 @@ export class LlViewer extends LitElement {
   @property({ type: Boolean }) cursorVisible = false;
   @property({ type: Number }) cursorX = 33;
   @property({ type: Number }) cursorY = 50;
+  @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
+  @property({ type: Number }) viewerCount = 0;
 
-  @state() private isPlaying = false;
-
-  private startPlayback() {
-    this.isPlaying = true;
-  }
+  @property({ attribute: false }) stream: MediaStream | null = null;
 
   render() {
     const isChulsoo = this.activeRoomName.includes('김철수');
@@ -55,20 +53,17 @@ export class LlViewer extends LitElement {
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
           <!-- Left: 16:9 Screen Capturer Screen (8/12) -->
           <div class="xl:col-span-8 flex flex-col space-y-4">
-            <div class="relative bg-slate-900 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 aspect-video overflow-hidden group flex items-center justify-center">
-              
-              <!-- Video Stream player (Shows when isPlaying is true) -->
-              ${this.isPlaying ? html`
+            <div class="relative bg-slate-900 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 aspect-video overflow-hidden group flex items-center justify-center w-full">
+              <!-- Video Stream player (Shows when stream is available) -->
+              ${this.stream ? html`
                 <video 
-                  class="absolute inset-0 w-full h-full object-cover z-0" 
-                  src="https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-his-computer-34315-large.mp4" 
+                  class="absolute inset-0 w-full h-full object-contain z-0" 
+                  .srcObject=${this.stream}
                   autoplay 
-                  loop 
-                  muted 
                   playsinline
                 ></video>
               ` : html`
-                <!-- Mock visual diagrams -->
+                <!-- Mock visual diagrams / placeholder when connecting -->
                 <svg class="absolute inset-0 w-full h-full opacity-40 z-0" viewBox="0 0 800 450" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="20" y="20" width="200" height="15" rx="4" fill="#1a73e8"/>
                   <rect x="20" y="45" width="340" height="12" rx="4" fill="#475569" class="dark:fill-[#334155]"/>
@@ -80,6 +75,15 @@ export class LlViewer extends LitElement {
                   <rect x="460" y="70" width="80" height="15" rx="4" fill="#1a73e8"/>
                   <path d="M0 225H800M400 0V450" stroke="#94a3b8" stroke-opacity="0.2"/>
                 </svg>
+                
+                <!-- Nice Connecting / Loading text in the center -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-10">
+                  <div class="inline-flex p-3 rounded-full bg-white/10 dark:bg-slate-900/10 border border-slate-200/20 mb-3 animate-spin">
+                    <i data-lucide="loader" class="w-8 h-8 text-google-blue"></i>
+                  </div>
+                  <h4 class="text-sm font-semibold text-white">화면 스트림 연결 중...</h4>
+                  <p class="text-xs text-slate-400 mt-1">호스트와 WebRTC direct 연결을 설정하고 있습니다</p>
+                </div>
               `}
 
               <!-- Remote cursor marker -->
@@ -106,15 +110,7 @@ export class LlViewer extends LitElement {
                 </div>
                 <span class="text-xs text-google-blue font-bold tracking-tight">LAN 보이스 음성 연결됨</span>
               </div>
-
-              <!-- Play overlay (Shows when not playing) -->
-              <div @click=${this.startPlayback} class="${this.isPlaying ? 'opacity-0 pointer-events-none scale-95' : 'opacity-100 scale-100'} absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-8 z-10 transition-all duration-300 cursor-pointer">
-                <div class="inline-flex p-3 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 mb-3 hover:scale-110 active:scale-95 transition-all shadow-md">
-                  <i data-lucide="play-circle" class="w-10 h-10 text-google-blue"></i>
-                </div>
-                <h4 class="text-sm font-semibold text-white">실시간 화면 캡처 수신 완료</h4>
-                <p class="text-xs text-slate-300 mt-1">플레이 버튼을 눌러 WebRTC 라이브 화면 시청을 시작하세요</p>
-              </div>
+            </div>
             </div>
 
 
@@ -135,8 +131,12 @@ export class LlViewer extends LitElement {
             </div>
           </div>
 
-          <!-- Space for chat sidebar placeholder in main grid -->
-          <slot></slot>
+          <!-- Render chat sidebar directly to support Light DOM layout -->
+          <ll-chat 
+            .chatMessages=${this.chatMessages} 
+            .viewerCount=${this.viewerCount} 
+            @send-message=${this.onForwardSendMessage}
+          ></ll-chat>
         </div>
       </div>
     `;
@@ -156,6 +156,10 @@ export class LlViewer extends LitElement {
 
   private onLeaveSession() {
     this.dispatchEvent(new CustomEvent('leave-session', { bubbles: true, composed: true }));
+  }
+
+  private onForwardSendMessage(e: CustomEvent<{ text: string }>) {
+    this.dispatchEvent(new CustomEvent('send-message', { detail: e.detail, bubbles: true, composed: true }));
   }
 }
 

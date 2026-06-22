@@ -23,7 +23,7 @@ export class LlHeader extends LitElement {
       <header class="border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 transition-colors duration-200">
         <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <!-- Logo -->
-          <div class="flex items-center space-x-3">
+          <div @click=${this.onLogoClick} class="flex items-center space-x-3 cursor-pointer select-none">
             <div class="w-9 h-9 rounded-lg bg-google-blue flex items-center justify-center shadow-md">
               <i data-lucide="zap" class="w-5 h-5 text-white"></i>
             </div>
@@ -89,6 +89,10 @@ export class LlHeader extends LitElement {
 
   private onOpenPro() {
     this.dispatchEvent(new CustomEvent('open-pro', { bubbles: true, composed: true }));
+  }
+
+  private onLogoClick() {
+    this.dispatchEvent(new CustomEvent('logo-click', { bubbles: true, composed: true }));
   }
 }
 

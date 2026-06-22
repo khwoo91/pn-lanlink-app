@@ -17,7 +17,7 @@ export class ModalPassword extends LitElement {
 
   @property({ type: Boolean }) open = false;
 
-  @query('#input-verify-password') private inputVerifyPasswordElement?: HTMLInputElement;
+  @query('#input-verify-password') inputVerifyPasswordElement?: HTMLInputElement;
 
   render() {
     return html`
@@ -59,7 +59,7 @@ export class ModalPassword extends LitElement {
   }
 
   private onSubmit() {
-    const password = this.inputVerifyPasswordElement ? this.inputVerifyPasswordElement.value : '';
+    const password = this.inputVerifyPasswordElement?.value || '';
     this.dispatchEvent(new CustomEvent('submit-verify-password', { detail: { password }, bubbles: true, composed: true }));
   }
 }
