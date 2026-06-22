@@ -26,6 +26,9 @@ function getLocalIPv4() {
 
 export default defineConfig({
   base: '/pn-lanlink-app/',
+  define: {
+    __SERVER_IP__: JSON.stringify(getLocalIPv4()),
+  },
   plugins: [
     tailwindcss(),
     {
