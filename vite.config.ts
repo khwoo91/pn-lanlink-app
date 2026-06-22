@@ -39,7 +39,7 @@ export default defineConfig({
         server.httpServer.on('upgrade', (request: any, socket: any, head: any) => {
           const url = new URL(request.url || '', `http://${request.headers.host}`);
           if (url.pathname === '/pn-lanlink-app/signaling') {
-            wss.handleUpgrade(request, socket, head, (ws) => {
+            wss.handleUpgrade(request, socket, head, (ws: any) => {
               wss.emit('connection', ws, request);
             });
           }
