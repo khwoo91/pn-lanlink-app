@@ -15,23 +15,49 @@ const wss = new WebSocketServer({ server });
 
 const activeRooms = new Map(); // ip -> room
 
-function broadcast(data) {
-  const str = JSON.stringify(data);
-  for (const client of wss.clients) {
-    if (client.readyState === 1) { // OPEN
-      client.send(str);
-    }
-  }
-}
+// 공인 IP 매칭에 따른 대기방 목록 필터링 전송
+function sendFilteredRoomList(ws) {
+  const rooms = Array.from(activeRooms.values());
+  const filtered = rooms.filter(room => {
+    // 1. 호스트의 공인 IP와 뷰어의 공인 IP가 일치하는 경우
+    // 2. 로컬호스트 개발 테스트 편의를 위해 루프백 주소인 경우 필터링 예외 허용
+    return room.publicIp === ws.clientPublicIp || 
+           ws.clientPublicIp === '127.0.0.1' || 
+           room.publicIp === '127.0.0.1';
+  });
 
-wss.on('connection', (ws) => {
-  // Send current active room list to newly connected client
   ws.send(JSON.stringify({
     type: 'room-list-response',
     from: 'server',
     to: 'client',
-    rooms: Array.from(activeRooms.values())
+    rooms: filtered
   }));
+}
+
+// 모든 접속 중인 클라이언트별 맞춤형 목록 브로드캐스트
+function broadcastRoomList() {
+  for (const client of wss.clients) {
+    if (client.readyState === 1) { // OPEN
+      sendFilteredRoomList(client);
+    }
+  }
+}
+
+wss.on('connection', (ws, req) => {
+  // 클라이언트의 공인 IP 추출
+  let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+  if (clientIp.includes(',')) {
+    clientIp = clientIp.split(',')[0].trim();
+  }
+  // IPv6 로컬 주소들을 IPv4 루프백으로 일치
+  if (clientIp === '::1' || clientIp === '::ffff:127.0.0.1') {
+    clientIp = '127.0.0.1';
+  }
+
+  ws.clientPublicIp = clientIp;
+
+  // 최초 연결 시 클라이언트 맞춤 필터링 목록 송신
+  sendFilteredRoomList(ws);
 
   ws.on('message', (message) => {
     try {
@@ -39,34 +65,21 @@ wss.on('connection', (ws) => {
 
       if (msg.type === 'room-register') {
         ws.roomIp = msg.room.ip;
+        // 방 등록 정보에 호스트의 공인 IP 속성 부여
+        msg.room.publicIp = ws.clientPublicIp;
         activeRooms.set(msg.room.ip, msg.room);
-        broadcast({
-          type: 'room-list-response',
-          from: 'server',
-          to: 'all',
-          rooms: Array.from(activeRooms.values())
-        });
+        broadcastRoomList();
       } 
       else if (msg.type === 'room-unregister') {
         activeRooms.delete(msg.ip);
         ws.roomIp = undefined;
-        broadcast({
-          type: 'room-list-response',
-          from: 'server',
-          to: 'all',
-          rooms: Array.from(activeRooms.values())
-        });
+        broadcastRoomList();
       }
       else if (msg.type === 'room-list-request') {
-        ws.send(JSON.stringify({
-          type: 'room-list-response',
-          from: 'server',
-          to: 'client',
-          rooms: Array.from(activeRooms.values())
-        }));
+        sendFilteredRoomList(ws);
       }
       else {
-        // Forward WebRTC signaling (offers, answers, candidates, joins, leaves)
+        // WebRTC 시그널링 교환 패킷 중계
         broadcast(msg);
       }
     } catch (e) {
@@ -77,15 +90,20 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     if (ws.roomIp) {
       activeRooms.delete(ws.roomIp);
-      broadcast({
-        type: 'room-list-response',
-        from: 'server',
-        to: 'all',
-        rooms: Array.from(activeRooms.values())
-      });
+      broadcastRoomList();
     }
   });
 });
+
+// 시그널링 교환용 기본 브로드캐스트
+function broadcast(data) {
+  const str = JSON.stringify(data);
+  for (const client of wss.clients) {
+    if (client.readyState === 1) { // OPEN
+      client.send(str);
+    }
+  }
+}
 
 server.listen(port, () => {
   console.log(`⚡ [LANLink Signaling Server] Running on port ${port}`);

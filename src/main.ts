@@ -23,20 +23,6 @@ import { captureMicrophone, setStreamAudioEnabled } from './infrastructure/voip-
 import type { LANRoom } from './infrastructure/mdns-signaling';
 import { SIGNALING_URL } from './config';
 
-declare const __SERVER_IP__: string;
-
-// 두 IP 주소의 C클래스 서브넷 대역(예: 192.168.0)이 일치하는지 체크하는 헬퍼 함수
-function isSameLocalSubnet(ip1: string, ip2: string): boolean {
-  if (!ip1 || !ip2) return false;
-  if (ip1 === 'localhost' || ip1 === '127.0.0.1' || ip2 === 'localhost' || ip2 === '127.0.0.1') {
-    return true;
-  }
-  const parts1 = ip1.split('.');
-  const parts2 = ip2.split('.');
-  if (parts1.length < 3 || parts2.length < 3) return false;
-  return parts1[0] === parts2[0] && parts1[1] === parts2[1] && parts1[2] === parts2[2];
-}
-
 @customElement('my-element')
 export class MyElement extends LitElement {
   updated() {
@@ -62,7 +48,7 @@ export class MyElement extends LitElement {
   @state() private localMuted: boolean = true;
   @state() private annotationVisible: boolean = false;
   @state() private scannedRooms: LANRoom[] = [];
-  @state() private serverDetectedIp: string = typeof __SERVER_IP__ !== 'undefined' ? __SERVER_IP__ : '';
+  @state() private serverDetectedIp: string = '';
   @state() private pendingRoomJoinCode: string = '';
 
   // Active room details
@@ -236,8 +222,7 @@ export class MyElement extends LitElement {
         }
 
         if (msg.type === 'room-list-response') {
-          const myIp = this.serverDetectedIp || window.location.hostname;
-          this.scannedRooms = msg.rooms.filter((room: LANRoom) => isSameLocalSubnet(room.ip, myIp));
+          this.scannedRooms = msg.rooms;
 
           if (this.pendingRoomJoinCode) {
             const code = this.pendingRoomJoinCode;
