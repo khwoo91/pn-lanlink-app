@@ -1,0 +1,14 @@
+{
+  "name": "pn-lanlink-signaling-server",
+  "version": "1.0.0",
+  "description": "LANLink WebRTC Cloud Signaling Server",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.16.0"
+  }
+}

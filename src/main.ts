@@ -21,8 +21,21 @@ import { hashPassword, verifyPassword } from './utils/crypto';
 import { captureScreen, stopMediaStream } from './infrastructure/webrtc-stream';
 import { captureMicrophone, setStreamAudioEnabled } from './infrastructure/voip-audio';
 import type { LANRoom } from './infrastructure/mdns-signaling';
+import { SIGNALING_URL } from './config';
 
 declare const __SERVER_IP__: string;
+
+// 두 IP 주소의 C클래스 서브넷 대역(예: 192.168.0)이 일치하는지 체크하는 헬퍼 함수
+function isSameLocalSubnet(ip1: string, ip2: string): boolean {
+  if (!ip1 || !ip2) return false;
+  if (ip1 === 'localhost' || ip1 === '127.0.0.1' || ip2 === 'localhost' || ip2 === '127.0.0.1') {
+    return true;
+  }
+  const parts1 = ip1.split('.');
+  const parts2 = ip2.split('.');
+  if (parts1.length < 3 || parts2.length < 3) return false;
+  return parts1[0] === parts2[0] && parts1[1] === parts2[1] && parts1[2] === parts2[2];
+}
 
 @customElement('my-element')
 export class MyElement extends LitElement {
@@ -173,8 +186,7 @@ export class MyElement extends LitElement {
   };
 
   private initWebSocketSignaling() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const signalingUrl = `${protocol}//${window.location.host}/pn-lanlink-app/signaling`;
+    const signalingUrl = SIGNALING_URL;
 
     const socket = new WebSocket(signalingUrl);
 
@@ -224,7 +236,8 @@ export class MyElement extends LitElement {
         }
 
         if (msg.type === 'room-list-response') {
-          this.scannedRooms = msg.rooms;
+          const myIp = this.serverDetectedIp || window.location.hostname;
+          this.scannedRooms = msg.rooms.filter((room: LANRoom) => isSameLocalSubnet(room.ip, myIp));
 
           if (this.pendingRoomJoinCode) {
             const code = this.pendingRoomJoinCode;
@@ -911,16 +924,6 @@ export class MyElement extends LitElement {
         @edit-nickname=${this.openNicknameEdit} @change-theme=${this.onThemeChange} @open-pro=${this.openProModal}
         @logo-click=${this.handleLogoClick}>
       </ll-header>
-      
-      <!-- HTTPS Mixed Content warning for LAN routing -->
-      ${window.location.protocol === 'https:' && this.serverDetectedIp ? html`
-        <div class="bg-amber-500/10 border-b border-amber-500/20 py-2.5 px-6 text-center text-xs text-amber-600 dark:text-amber-400 font-medium transition-colors animate-in slide-in-from-top duration-300">
-          ⚠️ 현재 보안 접속(HTTPS) 상태에서는 로컬 사내망(갤럭시 탭 등) 방 감지가 작동하지 않을 수 있습니다. 
-          <a href="http://${this.serverDetectedIp}:5173/pn-lanlink-app/${window.location.search}" class="underline font-bold hover:text-amber-700 dark:hover:text-amber-300 ml-1">
-            사내망 전용 접속 주소(http://${this.serverDetectedIp}:5173/...)로 이동하기 ⚡
-          </a>
-        </div>
-      ` : ''}
       
       <!-- Main Layout -->
       <main class="grow max-w-7xl mx-auto px-6 py-12 md:py-20 w-full flex flex-col justify-center">

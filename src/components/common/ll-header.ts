@@ -29,7 +29,7 @@ export class LlHeader extends LitElement {
             </div>
             <div class="flex items-baseline space-x-2">
               <span class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">LANLink</span>
-              <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 text-[9px] font-bold">v1.1.0</span>
+              <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 text-[9px] font-bold">v1.1.1</span>
               <span class="text-[11px] text-slate-500 font-medium hidden sm:inline">사내망 다이렉트 제어</span>
             </div>
           </div>
@@ -71,9 +71,9 @@ export class LlHeader extends LitElement {
             </div>
 
             <!-- PRO plan badge/button -->
-            <button @click=${this.onOpenPro} class="flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-slate-950 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm">
+            <!-- <button @click=${this.onOpenPro} class="flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-slate-950 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm">
               <i data-lucide="crown" class="w-3 h-3 fill-slate-950"></i> PRO
-            </button>
+            </button> -->
           </div>
         </div>
       </header>
