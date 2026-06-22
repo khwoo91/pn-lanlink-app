@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
+// @ts-ignore
 import { WebSocketServer } from 'ws';
 
 // @ts-ignore
