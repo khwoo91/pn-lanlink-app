@@ -49,9 +49,11 @@ export default defineConfig({
 
         function broadcast(data: any) {
           const str = JSON.stringify(data);
-          for (const client of wss.clients) {
-            if (client.readyState === 1) { // OPEN
-              client.send(str);
+          if (wss.clients) {
+            for (const client of wss.clients) {
+              if (client.readyState === 1) { // OPEN
+                client.send(str);
+              }
             }
           }
         }
