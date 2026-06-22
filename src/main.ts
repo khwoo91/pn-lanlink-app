@@ -20,7 +20,6 @@ import { getTheme, setTheme, getNickname, setNickname } from './utils/storage';
 import { hashPassword, verifyPassword } from './utils/crypto';
 import { captureScreen, stopMediaStream } from './infrastructure/webrtc-stream';
 import { captureMicrophone, setStreamAudioEnabled } from './infrastructure/voip-audio';
-import { mockRooms } from './infrastructure/mdns-signaling';
 import type { LANRoom } from './infrastructure/mdns-signaling';
 
 @customElement('my-element')
@@ -47,7 +46,9 @@ export class MyElement extends LitElement {
   @state() private viewerCount: number = 0;
   @state() private localMuted: boolean = true;
   @state() private annotationVisible: boolean = false;
-  @state() private scannedRooms: LANRoom[] = mockRooms;
+  @state() private scannedRooms: LANRoom[] = [];
+  @state() private serverDetectedIp: string = '';
+  @state() private pendingRoomJoinCode: string = '';
 
   // Active room details
   @state() private activeRoomName: string = '';
@@ -118,15 +119,8 @@ export class MyElement extends LitElement {
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get('room');
     if (roomParam) {
-      setTimeout(() => {
-        this.showToast(`🔗 공유방 링크 감지: ${roomParam}번 방에 입장을 시도합니다.`);
-        const rooms = this.scannedRooms;
-        const room = rooms.find(r => r.name.includes(roomParam) || r.ip === window.location.hostname);
-        const targetIp = room ? room.ip : window.location.hostname;
-        const targetLocked = room ? room.locked : true;
-        const targetName = room ? room.name : `공유 회의방 (${roomParam})`;
-        this.checkPasswordAndJoin(targetName, targetIp, targetLocked);
-      }, 800);
+      this.pendingRoomJoinCode = roomParam;
+      this.showToast(`🔗 공유방 링크 감지: 방 정보 확인 후 입장을 시도합니다.`);
     }
   }
 
@@ -193,7 +187,7 @@ export class MyElement extends LitElement {
           to: 'server',
           room: {
             name: `${this.currentNickname} 님의 방`,
-            ip: window.location.hostname,
+            ip: this.serverDetectedIp || window.location.hostname,
             code: this.activeRoomCode,
             locked: this.isRoomLocked,
             fps: 30
@@ -206,8 +200,43 @@ export class MyElement extends LitElement {
       try {
         const msg = JSON.parse(event.data);
 
+        if (msg.type === 'server-info') {
+          this.serverDetectedIp = msg.ip;
+          console.log('Server detected IP:', this.serverDetectedIp);
+          
+          if (this.currentScreen === 'host') {
+            this.sendSignalingMessage({
+              type: 'room-register',
+              from: 'host',
+              to: 'server',
+              room: {
+                name: `${this.currentNickname} 님의 방`,
+                ip: this.serverDetectedIp,
+                code: this.activeRoomCode,
+                locked: this.isRoomLocked,
+                fps: 30
+              }
+            });
+          }
+          return;
+        }
+
         if (msg.type === 'room-list-response') {
           this.scannedRooms = msg.rooms;
+
+          if (this.pendingRoomJoinCode) {
+            const code = this.pendingRoomJoinCode;
+            this.pendingRoomJoinCode = ''; // 1회만 자동입장 시도
+
+            const foundRoom = this.scannedRooms.find(r => r.code === code || r.ip === code || r.name.includes(code));
+            if (foundRoom) {
+              this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked);
+            } else {
+              const isLocalHost = code === window.location.hostname || code === this.serverDetectedIp;
+              const targetIp = isLocalHost ? (this.serverDetectedIp || window.location.hostname) : code;
+              this.checkPasswordAndJoin(`공유 회의방 (${code})`, targetIp, false);
+            }
+          }
           return;
         }
 
@@ -512,9 +541,13 @@ export class MyElement extends LitElement {
   }
 
   private getShareUrl(): string {
-    const origin = window.location.origin;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const host = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && this.serverDetectedIp
+      ? this.serverDetectedIp
+      : window.location.hostname;
+    const protocol = window.location.protocol;
     const path = window.location.pathname; // 예: /pn-lanlink-app/
-    return `${origin}${path}?room=${this.activeRoomCode}`;
+    return `${protocol}//${host}${port}${path}?room=${this.activeRoomCode}`;
   }
 
   private async onStartSharing(e: CustomEvent<{ password: string }>) {
@@ -538,7 +571,7 @@ export class MyElement extends LitElement {
       to: 'server',
       room: {
         name: `${this.currentNickname} 님의 방`,
-        ip: window.location.hostname,
+        ip: this.serverDetectedIp || window.location.hostname,
         code: this.activeRoomCode,
         locked: this.isRoomLocked,
         fps: 30
@@ -601,8 +634,9 @@ export class MyElement extends LitElement {
 
     if (foundRoom) {
       this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked);
-    } else if (code === window.location.hostname) {
-      this.checkPasswordAndJoin(`${this.currentNickname} 님의 방`, window.location.hostname, this.isRoomLocked);
+    } else if (code === window.location.hostname || code === this.serverDetectedIp) {
+      const targetIp = this.serverDetectedIp || window.location.hostname;
+      this.checkPasswordAndJoin(`${this.currentNickname} 님의 방`, targetIp, this.isRoomLocked);
     } else {
       this.showToast('⚠️ 해당 주소의 활성 방을 찾을 수 없습니다.');
     }
