@@ -137,6 +137,7 @@ export class LlViewer extends LitElement {
             .viewerCount=${this.viewerCount} 
             .participants=${this.participants}
             @send-message=${this.onForwardSendMessage}
+            class="xl:col-span-4 block w-full"
           ></ll-chat>
         </div>
       </div>

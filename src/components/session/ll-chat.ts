@@ -23,7 +23,7 @@ export class LlChat extends LitElement {
 
   render() {
     return html`
-      <div class="xl:col-span-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-auto max-h-115">
+      <div class="w-full bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-auto max-h-115">
         <!-- Chat header -->
         <div class="p-3 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-1.5">
           <div class="flex items-center justify-between">

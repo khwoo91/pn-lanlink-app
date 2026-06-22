@@ -1043,7 +1043,7 @@ export class MyElement extends LitElement {
             .viewerCount=${this.viewerCount}
             .participants=${this.activeParticipants}
             @send-message=${this.onSendMessage}
-            class="xl:col-span-4"
+            class="xl:col-span-4 block w-full"
           ></ll-chat>
         </div>
         ` : ''}
