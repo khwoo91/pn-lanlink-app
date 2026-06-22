@@ -2,10 +2,7 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { WebSocketServer } from 'ws';
 
-// Ambient declaration to bypass missing @types/node in offline environments
-declare module 'os' {
-  export function networkInterfaces(): any;
-}
+// @ts-ignore
 import os from 'os';
 
 function getLocalIPv4() {
