@@ -14,7 +14,7 @@ const getSignalingUrl = (): string => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${window.location.host}/pn-lanlink-app/signaling`;
   }
-  return 'wss://pn-lanlink-signaling.onrender.com';
+  return 'wss://lanlink.onrender.com';
 };
 
 export const SIGNALING_URL = getSignalingUrl();
