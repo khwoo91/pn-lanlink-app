@@ -136,7 +136,7 @@ export class LlHeader extends LitElement {
               <div class="bg-google-blue/10 text-google-blue flex h-4 w-4 items-center justify-center rounded-full">
                 <i data-lucide="user" class="h-3.5 w-3.5"></i>
               </div>
-              <span class="hidden text-slate-500 sm:inline dark:text-slate-400">내 닉네임:</span>
+              <span class="hidden text-slate-500 sm:inline dark:text-slate-400">닉네임:</span>
               <strong class="max-w-20 truncate font-bold text-slate-800 dark:text-slate-200"
                 >${this.currentNickname}</strong
               >
