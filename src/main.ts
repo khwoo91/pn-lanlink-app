@@ -156,7 +156,7 @@ export class MyElement extends LitElement {
       clearTimeout(this.toastTimeout);
     }
     if (this.currentScreen === "host") {
-      this.sendSignalingMessage({ type: "room-unregister", ip: window.location.hostname });
+      this.sendSignalingMessage({ type: "room-unregister", ip: this.serverDetectedIp || window.location.hostname });
       this.sendSignalingMessage({ type: "leave", from: "host", to: "all" });
     } else if (this.currentScreen === "viewer") {
       this.sendSignalingMessage({ type: "leave", from: this.viewerId, to: "host" });
@@ -221,7 +221,7 @@ export class MyElement extends LitElement {
 
   private handleBeforeUnload = () => {
     if (this.currentScreen === "host") {
-      this.sendSignalingMessage({ type: "room-unregister", ip: window.location.hostname });
+      this.sendSignalingMessage({ type: "room-unregister", ip: this.serverDetectedIp || window.location.hostname });
       this.sendSignalingMessage({ type: "leave", from: "host", to: "all" });
     } else if (this.currentScreen === "viewer") {
       this.sendSignalingMessage({ type: "leave", from: this.viewerId, to: "host" });
@@ -610,15 +610,25 @@ export class MyElement extends LitElement {
   }
 
   private getShareUrl(): string {
-    if (this.serverDetectedIp) {
-      // 로컬 개발 서버 포트가 있으면 사용하고, 없으면 기본 5173 포트 부여
+    const hostname = window.location.hostname;
+    const isLocal =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.") ||
+      window.location.port !== "";
+
+    if (isLocal) {
+      const ip = this.serverDetectedIp || hostname;
       const port = window.location.port ? `:${window.location.port}` : ":5173";
-      return `http://${this.serverDetectedIp}${port}/pn-lanlink-app/?room=${this.activeRoomCode}&ip=${this.serverDetectedIp}`;
+      return `http://${ip}${port}/pn-lanlink-app/?room=${this.activeRoomCode}&ip=${ip}`;
+    } else {
+      const origin = window.location.origin; // e.g. https://khwoo91.github.io
+      const path = window.location.pathname; // e.g. /pn-lanlink-app/
+      const ip = this.serverDetectedIp || hostname;
+      return `${origin}${path}?room=${this.activeRoomCode}&ip=${ip}`;
     }
-    const port = window.location.port ? `:${window.location.port}` : "";
-    const protocol = window.location.protocol;
-    const path = window.location.pathname; // 예: /pn-lanlink-app/
-    return `${protocol}//${window.location.hostname}${port}${path}?room=${this.activeRoomCode}&ip=${window.location.hostname}`;
   }
 
   private async onStartSharing(e: CustomEvent<{ password: string }>) {
@@ -677,7 +687,7 @@ export class MyElement extends LitElement {
       type: "room-unregister",
       from: "host",
       to: "server",
-      ip: window.location.hostname,
+      ip: this.serverDetectedIp || window.location.hostname,
     });
   }
 
@@ -1031,7 +1041,7 @@ export class MyElement extends LitElement {
       </ll-header>
 
       <!-- Main Layout -->
-      <main class="mx-auto flex w-full max-w-5xl grow flex-col justify-center px-6 py-12 md:py-20">
+      <main class="mx-auto flex w-full max-w-5xl grow flex-col justify-center px-4 sm:px-6 py-6 md:py-12">
         <!-- Landing page panel -->
         ${this.currentScreen === "landing"
           ? html`
@@ -1076,7 +1086,7 @@ export class MyElement extends LitElement {
                 class="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 xl:grid-cols-12"
               >
                 <div
-                  class="custom-shadow animate-in zoom-in-95 space-y-8 rounded-3xl border border-slate-200 bg-white p-8 duration-300 xl:col-span-8 dark:border-slate-800 dark:bg-slate-900"
+                  class="custom-shadow animate-in zoom-in-95 space-y-8 rounded-3xl border border-slate-200 bg-white p-4 sm:p-8 duration-300 xl:col-span-8 dark:border-slate-800 dark:bg-slate-900"
                 >
                   <div class="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
                     <div class="flex items-center gap-3">

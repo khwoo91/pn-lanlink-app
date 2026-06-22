@@ -62,7 +62,7 @@ export class LlViewer extends LitElement {
     return html`
       <div
         id="active-viewer-container"
-        class="animate-in zoom-in-95 mx-auto w-full max-w-7xl space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl duration-200 dark:border-slate-800 dark:bg-slate-900"
+        class="animate-in zoom-in-95 mx-auto w-full max-w-7xl space-y-4 rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-xl duration-200 dark:border-slate-800 dark:bg-slate-900"
       >
         <div
           class="flex flex-col justify-between gap-3 border-b border-slate-200 pb-3 sm:flex-row sm:items-center dark:border-slate-800"
@@ -180,7 +180,7 @@ export class LlViewer extends LitElement {
 
               <!-- Floating control overlay bar -->
               <div
-                class="pointer-events-none absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 translate-y-20 items-center gap-2 rounded-2xl border border-slate-700/50 bg-slate-900/85 p-2 opacity-0 shadow-lg backdrop-blur transition-all duration-300 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
+                class="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-2xl border border-slate-700/50 bg-slate-900/85 p-2 shadow-lg backdrop-blur transition-all duration-300 pointer-events-auto opacity-100 translate-y-0 md:pointer-events-none md:translate-y-20 md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:translate-y-0 md:group-hover:opacity-100"
               >
                 <!-- Mute / Unmute -->
                 <button

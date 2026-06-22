@@ -73,7 +73,10 @@ wss.on('connection', (ws, req) => {
         broadcastRoomList();
       } 
       else if (msg.type === 'room-unregister') {
-        activeRooms.delete(msg.ip);
+        const targetIp = msg.ip || ws.roomIp;
+        if (targetIp) {
+          activeRooms.delete(targetIp);
+        }
         ws.roomIp = undefined;
         broadcastRoomList();
       }

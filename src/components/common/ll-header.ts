@@ -44,7 +44,7 @@ export class LlHeader extends LitElement {
       <header
         class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900/90"
       >
-        <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+        <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
           <!-- Logo -->
           <div @click=${this.onLogoClick} class="flex cursor-pointer items-center space-x-3 select-none">
             <div class="bg-google-blue flex h-9 w-9 items-center justify-center rounded-lg shadow-md">
@@ -63,7 +63,7 @@ export class LlHeader extends LitElement {
           <!-- Actions -->
           <div class="flex items-center space-x-2 md:space-x-3">
             <!-- LAN state -->
-            <div class="items-center space-x-1.5 text-[13px] transition-colors md:flex">
+            <div class="flex items-center space-x-1.5 text-[13px] transition-colors shrink-0">
               <span class="relative flex h-2 w-2">
                 ${this.isSignalingConnected
                   ? html`
@@ -77,7 +77,7 @@ export class LlHeader extends LitElement {
               <span
                 class="${this.isSignalingConnected
                   ? "text-slate-600 dark:text-slate-300"
-                  : "text-rose-500 dark:text-rose-400"} font-medium"
+                  : "text-rose-500 dark:text-rose-400"} font-medium whitespace-nowrap"
               >
                 ${this.isSignalingConnected ? "연결중" : "연결 실패"}
               </span>
@@ -131,7 +131,7 @@ export class LlHeader extends LitElement {
 
             <!-- Nickname -->
             <div
-              class="flex items-center space-x-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs transition-colors dark:border-slate-700 dark:bg-slate-800"
+              class="flex items-center space-x-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs transition-colors dark:border-slate-700 dark:bg-slate-800 shrink-0"
             >
               <div class="bg-google-blue/10 text-google-blue flex h-4 w-4 items-center justify-center rounded-full">
                 <i data-lucide="user" class="h-3.5 w-3.5"></i>
