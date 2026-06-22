@@ -15,16 +15,10 @@ const wss = new WebSocketServer({ server });
 
 const activeRooms = new Map(); // ip -> room
 
-// 공인 IP 매칭에 따른 대기방 목록 필터링 전송
+// 공인 IP 매칭에 따른 대기방 목록 필터링 전송 (데모/테스트 편의성을 위해 필터링을 비활성화하고 전체 목록 전송)
 function sendFilteredRoomList(ws) {
   const rooms = Array.from(activeRooms.values());
-  const filtered = rooms.filter(room => {
-    // 1. 호스트의 공인 IP와 뷰어의 공인 IP가 일치하는 경우
-    // 2. 로컬호스트 개발 테스트 편의를 위해 루프백 주소인 경우 필터링 예외 허용
-    return room.publicIp === ws.clientPublicIp || 
-           ws.clientPublicIp === '127.0.0.1' || 
-           room.publicIp === '127.0.0.1';
-  });
+  const filtered = rooms; // 전체 목록 반환
 
   ws.send(JSON.stringify({
     type: 'room-list-response',
@@ -56,7 +50,15 @@ wss.on('connection', (ws, req) => {
 
   ws.clientPublicIp = clientIp;
 
-  // 최초 연결 시 클라이언트 맞춤 필터링 목록 송신
+  // 1. 최초 연결 시 클라이언트에게 공인 IP 정보를 전송 (client의 serverDetectedIp 획득용)
+  ws.send(JSON.stringify({
+    type: 'server-info',
+    from: 'server',
+    to: 'client',
+    ip: clientIp
+  }));
+
+  // 2. 최초 연결 시 대기방 목록 송신
   sendFilteredRoomList(ws);
 
   ws.on('message', (message) => {

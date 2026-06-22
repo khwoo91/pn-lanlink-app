@@ -21,7 +21,7 @@ import { hashPassword, verifyPassword } from './utils/crypto';
 import { captureScreen, stopMediaStream } from './infrastructure/webrtc-stream';
 import { captureMicrophone, setStreamAudioEnabled } from './infrastructure/voip-audio';
 import type { LANRoom } from './infrastructure/mdns-signaling';
-import { SIGNALING_URL } from './config';
+import { SIGNALING_URL, ICE_SERVERS } from './config';
 
 @customElement('my-element')
 export class MyElement extends LitElement {
@@ -321,7 +321,7 @@ export class MyElement extends LitElement {
     if (this.currentScreen !== 'host') return;
 
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: ICE_SERVERS
     });
 
     this.hostConnections.set(viewerId, pc);
@@ -387,7 +387,7 @@ export class MyElement extends LitElement {
     if (this.currentScreen !== 'viewer') return;
 
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: ICE_SERVERS
     });
     this.viewerConnection = pc;
 
