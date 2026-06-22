@@ -235,7 +235,7 @@ export class MyElement extends LitElement {
         if (msg.type === 'server-info') {
           this.serverDetectedIp = msg.ip;
           console.log('Server detected IP:', this.serverDetectedIp);
-          
+
           if (this.currentScreen === 'host') {
             this.sendSignalingMessage({
               type: 'room-register',
@@ -1053,7 +1053,7 @@ export class MyElement extends LitElement {
         <ll-viewer .activeRoomName=${this.activeRoomName} .activeRoomIp=${this.activeRoomIp} .localMuted=${this.localMuted}
           .annotationVisible=${this.annotationVisible} .cursorVisible=${this.cursorVisible} .cursorX=${this.cursorX}
           .cursorY=${this.cursorY} .chatMessages=${this.chatMessages} .viewerCount=${this.viewerCount}
-          .participants=${this.activeParticipants}
+          .participants=${this.activeParticipants} .stream=${this.activeStream}
           @toggle-mute=${this.toggleLocalMute} @simulate-click=${this.simulateClick}
           @toggle-draw=${this.toggleAnnotationOverlay} @leave-session=${this.leaveSession}
           @send-message=${this.onSendMessage}>

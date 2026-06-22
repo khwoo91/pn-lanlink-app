@@ -27,7 +27,8 @@ import {
   MousePointerClick,
   UserPlus,
   Check,
-  Link
+  Link,
+  Loader
 } from 'lucide';
 
 export const globalIcons = {
@@ -59,5 +60,6 @@ export const globalIcons = {
   MousePointerClick,
   UserPlus,
   Check,
-  Link
+  Link,
+  Loader
 };

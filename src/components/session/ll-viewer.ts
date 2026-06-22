@@ -112,7 +112,6 @@ export class LlViewer extends LitElement {
                 <span class="text-xs text-google-blue font-bold tracking-tight">LAN 보이스 음성 연결됨</span>
               </div>
             </div>
-            </div>
 
 
             <!-- Mute, click, draw buttons -->
