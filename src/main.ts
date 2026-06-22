@@ -67,6 +67,7 @@ export class MyElement extends LitElement {
   @state() private proModalOpen: boolean = false;
   @state() private idleSafeguardOpen: boolean = false;
   @state() private idleCountdown: number = 60;
+  @state() private activeParticipants: string[] = [];
 
   // Toast feedback state
   @state() private toastMessage: string = '';
@@ -160,6 +161,22 @@ export class MyElement extends LitElement {
 
     window.removeEventListener('beforeunload', this.handleBeforeUnload);
     super.disconnectedCallback();
+  }
+
+  private updateParticipants() {
+    const list = [this.currentNickname, ...Array.from(this.hostViewerNicknames.values())];
+    this.activeParticipants = list;
+    this.viewerCount = this.hostConnections.size;
+
+    const packet = {
+      type: 'participants-update',
+      list: list
+    };
+    this.hostDataChannels.forEach(channel => {
+      if (channel.readyState === 'open') {
+        channel.send(JSON.stringify(packet));
+      }
+    });
   }
 
   private handleBeforeUnload = () => {
@@ -290,7 +307,7 @@ export class MyElement extends LitElement {
 
     this.hostConnections.set(viewerId, pc);
     this.hostViewerNicknames.set(viewerId, nickname || '참여자');
-    this.viewerCount = this.hostConnections.size;
+    this.updateParticipants();
 
     if (this.screenStream) {
       this.screenStream.getTracks().forEach(track => {
@@ -426,7 +443,7 @@ export class MyElement extends LitElement {
       }
       const nickname = this.hostViewerNicknames.get(from) || '참여자';
       this.hostViewerNicknames.delete(from);
-      this.viewerCount = this.hostConnections.size;
+      this.updateParticipants();
       document.querySelectorAll(`audio[data-viewer-id="${from}"]`).forEach(el => el.remove());
       this.showToast(`🚪 [${nickname}] 님이 퇴장하셨습니다.`);
     } else if (this.currentScreen === 'viewer' && from === 'host') {
@@ -439,6 +456,11 @@ export class MyElement extends LitElement {
     channel.onmessage = (event) => {
       try {
         const packet = JSON.parse(event.data);
+        if (packet.type === 'participants-update') {
+          this.activeParticipants = packet.list;
+          this.viewerCount = packet.list.length - 1;
+          return;
+        }
         if (packet.sender && packet.content) {
           this.chatMessages = [
             ...this.chatMessages,
@@ -580,24 +602,13 @@ export class MyElement extends LitElement {
       }
     });
 
-    // Simulate other users joining the meeting after a few seconds
-    setTimeout(() => {
-      if (this.currentScreen === 'host') {
-        this.viewerCount = 1;
-        this.showToast('👥 팀원이 공유방에 입장했습니다.');
-      }
-    }, 4000);
-
-    setTimeout(() => {
-      if (this.currentScreen === 'host') {
-        this.viewerCount = 2;
-      }
-    }, 10000);
+    this.activeParticipants = [this.currentNickname];
   }
 
   private stopSharing() {
     this.currentScreen = 'landing';
     this.viewerCount = 0;
+    this.activeParticipants = [];
     this.stopIdleTimer();
     this.idleSafeguardOpen = false;
     this.cleanupMediaStreams();
@@ -676,7 +687,8 @@ export class MyElement extends LitElement {
     this.currentScreen = 'viewer';
     this.activeRoomName = this.tempJoinName;
     this.activeRoomIp = this.tempJoinIp;
-    this.viewerCount = 1;
+    this.viewerCount = 0;
+    this.activeParticipants = [];
 
     // Reset Chat Messages
     this.chatMessages = [
@@ -699,6 +711,7 @@ export class MyElement extends LitElement {
   private leaveSession() {
     this.currentScreen = 'landing';
     this.viewerCount = 0;
+    this.activeParticipants = [];
 
     // Send leave signal
     this.sendSignalingMessage({
@@ -1007,6 +1020,7 @@ export class MyElement extends LitElement {
           <ll-chat
             .chatMessages=${this.chatMessages}
             .viewerCount=${this.viewerCount}
+            .participants=${this.activeParticipants}
             @send-message=${this.onSendMessage}
             class="xl:col-span-4"
           ></ll-chat>
@@ -1018,6 +1032,7 @@ export class MyElement extends LitElement {
         <ll-viewer .activeRoomName=${this.activeRoomName} .activeRoomIp=${this.activeRoomIp} .localMuted=${this.localMuted}
           .annotationVisible=${this.annotationVisible} .cursorVisible=${this.cursorVisible} .cursorX=${this.cursorX}
           .cursorY=${this.cursorY} .chatMessages=${this.chatMessages} .viewerCount=${this.viewerCount}
+          .participants=${this.activeParticipants}
           @toggle-mute=${this.toggleLocalMute} @simulate-click=${this.simulateClick}
           @toggle-draw=${this.toggleAnnotationOverlay} @leave-session=${this.leaveSession}
           @send-message=${this.onSendMessage}>

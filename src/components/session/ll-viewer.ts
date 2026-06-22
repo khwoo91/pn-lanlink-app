@@ -24,6 +24,7 @@ export class LlViewer extends LitElement {
   @property({ type: Number }) cursorY = 50;
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
+  @property({ type: Array }) participants: string[] = [];
 
   @property({ attribute: false }) stream: MediaStream | null = null;
 
@@ -135,6 +136,7 @@ export class LlViewer extends LitElement {
           <ll-chat 
             .chatMessages=${this.chatMessages} 
             .viewerCount=${this.viewerCount} 
+            .participants=${this.participants}
             @send-message=${this.onForwardSendMessage}
           ></ll-chat>
         </div>
