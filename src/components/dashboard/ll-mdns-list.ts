@@ -25,9 +25,10 @@ export class LlMdnsList extends LitElement {
         <!-- Scanned rooms count -->
         <div class="flex items-center justify-between px-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
           <span class="flex items-center gap-1.5">
-            <i data-lucide="search" class="text-google-blue h-3.5 w-3.5"></i> 사내 네트워크 대기방 감지
+            <i data-lucide="search" class="text-google-blue h-3.5 w-3.5"></i>
+            동일 IP 공유방 목록
           </span>
-          <span class="text-google-blue animate-pulse text-[10px]">실시간 탐색 중...</span>
+          <span class="text-google-blue animate-pulse text-[10px]">탐색 중...</span>
         </div>
 
         <!-- Scanned list -->

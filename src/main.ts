@@ -31,6 +31,20 @@ export class MyElement extends LitElement {
       root: this,
     });
   }
+  updated(changedProperties: Map<string | number | symbol, unknown>) {
+    super.updated(changedProperties);
+    if (
+      changedProperties.has("currentScreen") ||
+      changedProperties.has("nicknameModalOpen") ||
+      changedProperties.has("proModalOpen") ||
+      changedProperties.has("toastVisible")
+    ) {
+      createIcons({
+        icons: globalIcons,
+        root: this,
+      });
+    }
+  }
   // Use Light DOM for seamless styling via tailwind.css and global plugins
   createRenderRoot() {
     return this;
@@ -97,7 +111,7 @@ export class MyElement extends LitElement {
   private idleTimerInterval?: number;
   private emptyRoomTimeout?: number;
 
-  private screenStream: MediaStream | null = null;
+  @state() private screenStream: MediaStream | null = null;
   private micStream: MediaStream | null = null;
 
   // WebRTC & Signaling properties
@@ -191,23 +205,6 @@ export class MyElement extends LitElement {
     this.activeParticipants = list;
     this.viewerCount = this.hostConnections.size;
 
-    // 0명인 방 자동 폐쇄 (10초 유예 기간 제공)
-    if (this.viewerCount === 0) {
-      if (!this.emptyRoomTimeout) {
-        this.emptyRoomTimeout = window.setTimeout(() => {
-          if (this.viewerCount === 0 && this.currentScreen === "host") {
-            this.stopSharing();
-            this.showToast("🛑 참여 인원이 없어 방이 자동으로 폐쇄되었습니다.");
-          }
-        }, 10000);
-      }
-    } else {
-      if (this.emptyRoomTimeout) {
-        clearTimeout(this.emptyRoomTimeout);
-        this.emptyRoomTimeout = undefined;
-      }
-    }
-
     const packet = {
       type: "participants-update",
       list: list,
@@ -285,8 +282,6 @@ export class MyElement extends LitElement {
           if (this.pendingRoomJoinCode) {
             const code = this.pendingRoomJoinCode;
             const fallbackIp = this.pendingRoomJoinIp;
-            this.pendingRoomJoinCode = ""; // 1회만 자동입장 시도
-            this.pendingRoomJoinIp = "";
 
             const foundRoom = this.scannedRooms.find((r) => r.code === code || r.ip === code || r.name.includes(code));
             if (foundRoom) {
@@ -298,7 +293,7 @@ export class MyElement extends LitElement {
                 (code === window.location.hostname || code === this.serverDetectedIp
                   ? this.serverDetectedIp || window.location.hostname
                   : code);
-              this.checkPasswordAndJoin(`공유 회의방 (${code})`, targetIp, false);
+              this.checkPasswordAndJoin(`공유방 (${code})`, targetIp, false);
             }
           }
           return;
@@ -646,7 +641,7 @@ export class MyElement extends LitElement {
     this.hostSetupOpen = false;
     this.currentScreen = "host";
     this.viewerCount = 0;
-    this.showToast("🚀 회의 화면 공유 스트리밍이 정상 개설되었습니다!");
+    this.showToast("🚀 화면 공유 스트리밍이 정상 개설되었습니다!");
 
     // Register room via WebSocket signaling
     this.sendSignalingMessage({
@@ -689,6 +684,32 @@ export class MyElement extends LitElement {
       to: "server",
       ip: this.serverDetectedIp || window.location.hostname,
     });
+  }
+
+  private async changeSharedScreen() {
+    try {
+      const newStream = await captureScreen();
+      if (!newStream) return;
+
+      if (this.screenStream) {
+        this.screenStream.getTracks().forEach((track) => track.stop());
+      }
+
+      this.screenStream = newStream;
+
+      const videoTrack = newStream.getVideoTracks()[0];
+      this.hostConnections.forEach((pc) => {
+        const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+        if (sender && videoTrack) {
+          sender.replaceTrack(videoTrack);
+        }
+      });
+
+      this.showToast("🔄 공유 화면이 성공적으로 변경되었습니다.");
+    } catch (e) {
+      console.error("Failed to change shared screen:", e);
+      this.showToast("❌ 화면 공유 변경에 실패했습니다.");
+    }
   }
 
   // --- Room Join (Guest Viewer Mode) Simulation ---
@@ -796,7 +817,7 @@ export class MyElement extends LitElement {
       {
         sender: "System",
         content:
-          "📢 보안 안내: 해당 대화 내역은 외부 서버에 저장되지 않고 WebRTC 패킷으로 흐르며, 방 종료 즉시 메모리에서 완벽하게 파기됩니다.",
+          "📢 채팅방 안내: 해당 대화 내역은 외부 서버에 저장되지 않고, 채팅방이 종료되면 모든 대화내용은 삭제됩니다.",
         system: true,
       },
     ];
@@ -810,9 +831,11 @@ export class MyElement extends LitElement {
         roomCode: this.pendingRoomJoinCode || this.activeRoomCode,
         nickname: this.currentNickname,
       });
+      this.pendingRoomJoinCode = "";
+      this.pendingRoomJoinIp = "";
     }, 500);
 
-    this.showToast(`⚡ ${this.activeRoomName} 님의 LAN 세션 연결 시도 중...`);
+    this.showToast(`⚡ ${this.activeRoomName} 님에게 화면공유 연결 시도 중...`);
   }
 
   private leaveSession() {
@@ -838,7 +861,7 @@ export class MyElement extends LitElement {
     this.activeStream = null;
 
     this.cleanupMediaStreams();
-    this.showToast("🚪 세션 연결이 중단되었습니다.");
+    this.showToast("연결이 중단되었습니다.");
   }
 
   // --- Mic Mute Toggle ---
@@ -869,7 +892,7 @@ export class MyElement extends LitElement {
 
     setStreamAudioEnabled(this.micStream, !this.localMuted);
     this.showToast(
-      this.localMuted ? "🔇 내 마이크가 음소거되었습니다." : "🎙️ 마이크가 켜졌습니다. (보이스 VoIP 송신 시작)"
+      this.localMuted ? "마이크가 음소거되었습니다." : "마이크가 켜졌습니다."
     );
   }
 
@@ -877,7 +900,7 @@ export class MyElement extends LitElement {
   private toggleAnnotationOverlay() {
     this.annotationVisible = !this.annotationVisible;
     this.showToast(
-      this.annotationVisible ? "✏️ 화면 드로잉 필기 레이어를 오버레이합니다." : "✏️ 화면 드로잉 필기 레이어를 숨깁니다."
+      this.annotationVisible ? "화면 드로잉 레이어가 표시됩니다." : "화면 드로잉 레이어가 숨겨집니다."
     );
   }
 
@@ -886,7 +909,7 @@ export class MyElement extends LitElement {
     this.cursorVisible = true;
     this.cursorX = Math.floor(Math.random() * 40 + 20); // range 20% to 60%
     this.cursorY = Math.floor(Math.random() * 40 + 20);
-    this.showToast("⚡ 가상 원격 마우스 클릭 신호 전송 (WebRTC DataChannel)");
+    this.showToast("가상 원격 마우스 클릭");
     setTimeout(() => {
       this.cursorVisible = false;
     }, 2000);
@@ -926,7 +949,7 @@ export class MyElement extends LitElement {
   private simulateIdleTrigger() {
     this.idleSafeguardOpen = true;
     this.idleCountdown = 60;
-    this.showToast("🚦 대역폭 세이버 연출이 작동되었습니다.");
+    this.showToast("대역폭 절약 모드가 시작되었습니다. 1분간 반응 없을 시 자동 종료됩니다.");
     this.startIdleTimer();
   }
 
@@ -950,7 +973,7 @@ export class MyElement extends LitElement {
   private cancelIdleSafeguard() {
     this.stopIdleTimer();
     this.idleSafeguardOpen = false;
-    this.showToast("✅ 회의 유지가 요청되었습니다. 세션 대기방 타이머 초기화 완료.");
+    this.showToast("공유방이 유지되었습니다.");
   }
 
   private triggerImmediateStop() {
@@ -1081,121 +1104,151 @@ export class MyElement extends LitElement {
         <!-- Active Host Sharing Workspace -->
         ${this.currentScreen === "host"
           ? html`
-              <div
-                id="sharing-active-workspace"
-                class="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 xl:grid-cols-12"
-              >
-                <div
-                  class="custom-shadow animate-in zoom-in-95 space-y-8 rounded-3xl border border-slate-200 bg-white p-4 sm:p-8 duration-300 xl:col-span-8 dark:border-slate-800 dark:bg-slate-900"
-                >
-                  <div class="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
-                    <div class="flex items-center gap-3">
-                      <span class="relative flex h-3 w-3">
-                        <span
-                          class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"
-                        ></span>
-                        <span class="relative inline-flex h-3 w-3 rounded-full bg-red-500"></span>
-                      </span>
-                      <div>
-                        <h4 class="text-lg font-bold text-slate-900 dark:text-white">회의 스트리밍 방송 가동 중</h4>
-                        <p class="text-xs text-slate-500">사내망 다이렉트 WebRTC 스트리밍이 가동되고 있습니다.</p>
-                      </div>
-                    </div>
-                    <div
-                      class="flex max-w-md items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-slate-800 dark:bg-slate-950"
-                    >
-                      <i data-lucide="users" class="text-google-blue h-4 w-4 shrink-0"></i>
-                      <span class="truncate font-semibold text-slate-600 dark:text-slate-300">
-                        참여자:
-                        <span class="text-google-blue font-bold">
-                          ${this.activeParticipants.length > 1 ? this.activeParticipants.slice(1).join(", ") : "없음"}
-                        </span>
-                        (${this.viewerCount}명)
-                      </span>
-                    </div>
-                  </div>
-
-                  <div class="grid grid-cols-1 items-center gap-8 md:grid-cols-12">
-                    <div
-                      class="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center shadow-inner md:col-span-4 dark:border-slate-800 dark:bg-slate-950"
-                    >
-                      <div
-                        class="mb-3 flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800"
-                      >
-                        <img
-                          src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-                            this.getShareUrl()
-                          )}"
-                          class="h-24 w-24 rounded-lg"
-                          alt="Share QR Code"
-                        />
-                      </div>
-                      <span class="text-xs text-slate-400">모바일 / 태블릿 간편 QR</span>
-                      <div class="text-md text-google-blue mt-1 font-bold tracking-wider">${this.activeRoomCode}</div>
-                    </div>
-
-                    <div class="flex flex-col justify-between space-y-4 md:col-span-8">
-                      <div class="space-y-1">
-                        <span class="text-xs font-bold tracking-wider text-slate-500 uppercase"
-                          >로컬 접속 공유 링크</span
-                        >
-                        <div class="flex items-center gap-2">
-                          <div
-                            class="grow rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-mono text-xs break-all text-slate-600 select-all dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
-                          >
-                            ${this.getShareUrl()}
+              <div id="sharing-active-workspace" class="mx-auto flex w-full max-w-7xl flex-col gap-8">
+                <!-- Top Section: 2 Columns (Info Panel & Video Preview) -->
+                <div class="grid grid-cols-1 gap-8 xl:grid-cols-12">
+                  
+                  <!-- Left: Host Info, QR Code, Link & Action buttons (5/12) -->
+                  <div
+                    class="custom-shadow animate-in zoom-in-95 flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 xl:col-span-5"
+                  >
+                    <div class="space-y-6">
+                      <!-- Title & Participant count -->
+                      <div class="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
+                        <div class="flex items-center gap-3">
+                          <span class="relative flex h-3 w-3">
+                            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex h-3 w-3 rounded-full bg-red-500"></span>
+                          </span>
+                          <div>
+                            <h4 class="text-md font-bold text-slate-900 dark:text-white">
+                              화면공유 가동 중
+                            </h4>
+                            <p class="text-xs text-slate-500">P2P 스트리밍이 가동되고 있습니다.</p>
                           </div>
-                          <button
-                            @click=${() => this.copyToClipboard(this.getShareUrl())}
-                            class="hover:border-google-blue rounded-lg border border-slate-200 bg-slate-100 p-2.5 text-slate-500 transition dark:border-slate-700 dark:bg-slate-800"
-                            title="링크 복사"
-                          >
-                            <i data-lucide="copy" class="h-4 w-4"></i>
-                          </button>
                         </div>
                       </div>
 
-                      <div
-                        class="bg-google-blue/5 border-google-blue/10 space-y-1 rounded-xl border p-4 text-xs text-slate-500"
-                      >
+                      <div class="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                        <!-- QR Code -->
+                        <div class="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center sm:col-span-5 dark:border-slate-800 dark:bg-slate-950">
+                          <div class="mb-2 flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800">
+                            <img
+                              src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(this.getShareUrl())}"
+                              class="h-20 w-20 rounded-lg"
+                              alt="Share QR Code"
+                            />
+                          </div>
+                          <span class="text-[10px] text-slate-400">간편 QR 코드</span>
+                          <div class="text-sm text-google-blue mt-0.5 font-bold tracking-wider">${this.activeRoomCode}</div>
+                        </div>
+
+                        <!-- Link & Info -->
+                        <div class="flex flex-col justify-between gap-3 sm:col-span-7">
+                          <div class="space-y-1">
+                            <span class="text-[11px] font-bold tracking-wider text-slate-500 uppercase">접속 공유 링크</span>
+                            <div class="flex items-center gap-2">
+                              <div class="grow rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] break-all text-slate-600 select-all dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+                                ${this.getShareUrl()}
+                              </div>
+                              <button
+                                @click=${() => this.copyToClipboard(this.getShareUrl())}
+                                class="hover:border-google-blue rounded-lg border border-slate-200 bg-slate-100 p-2 text-slate-500 transition dark:border-slate-700 dark:bg-slate-800"
+                                title="링크 복사"
+                              >
+                                <i data-lucide="copy" class="h-4 w-4"></i>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div class="flex max-w-md items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-slate-800 dark:bg-slate-950">
+                            <i data-lucide="users" class="text-google-blue h-4 w-4 shrink-0"></i>
+                            <span class="truncate font-semibold text-slate-600 dark:text-slate-300">
+                              참여자:
+                              <span class="text-google-blue font-bold">
+                                ${this.activeParticipants.length > 1 ? this.activeParticipants.slice(1).join(", ") : "없음"}
+                              </span>
+                              (${this.viewerCount + 1}명)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="bg-google-blue/5 border-google-blue/10 space-y-1 rounded-xl border p-3.5 text-[11px] text-slate-500">
                         <p class="text-google-blue flex items-center gap-1 font-bold">
-                          <i data-lucide="lock" class="h-3.5 w-3.5"></i> 종단간 보안 기밀 보호 작동 중
+                          <i data-lucide="lock" class="h-3.5 w-3.5"></i>
+                          보안 기밀 보호 작동 중
                         </p>
-                        <p class="text-[11px] leading-relaxed">
-                          설정된 비밀번호가 안전하게 키로 바인딩되었습니다. 사내 메신저나 슬랙에 주소를 전달하세요.
+                        <p class="leading-relaxed">
+                          설정된 비밀번호가 안전하게 설정되었습니다.
                         </p>
                       </div>
+                    </div>
 
-                      <div
-                        class="flex flex-col items-center justify-between gap-2 border-t border-slate-200 pt-2 text-xs sm:flex-row dark:border-slate-800"
-                      >
-                        <div class="flex items-center gap-1.5 text-slate-400">
-                          <span>테스트 기능:</span>
-                          <button
-                            @click=${this.simulateIdleTrigger}
-                            class="text-google-blue dark:text-google-blue font-bold hover:underline"
-                          >
-                            미접속 30분 초과 연출 ⚡
-                          </button>
-                        </div>
+                    <div class="flex flex-col gap-2 border-t border-slate-200 pt-4 mt-6 dark:border-slate-800">
+                      <!-- Action buttons: Change Share Screen / Stop sharing -->
+                      <div class="flex flex-col gap-2 sm:flex-row">
+                        <button
+                          @click=${this.changeSharedScreen}
+                          class="flex grow items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-xs font-bold text-google-blue transition hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400"
+                        >
+                          <i data-lucide="screen-share" class="h-4 w-4"></i> 공유 화면 변경
+                        </button>
                         <button
                           @click=${this.stopSharing}
-                          class="flex w-full items-center justify-center gap-2 rounded-lg bg-rose-50 px-6 py-2.5 font-bold text-rose-600 transition-colors hover:bg-rose-100 sm:w-auto"
+                          class="flex items-center justify-center gap-2 rounded-lg bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-100"
                         >
-                          <i data-lucide="square" class="h-3.5 w-3.5 fill-rose-600"></i> 방송 종료하기
+                          <i data-lucide="square" class="h-3.5 w-3.5 fill-rose-600"></i>
+                          공유 종료하기
                         </button>
                       </div>
                     </div>
                   </div>
+
+                  <!-- Right: Host Screen Video Preview (7/12) -->
+                  <div
+                    class="custom-shadow animate-in zoom-in-95 flex flex-col rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 xl:col-span-7"
+                  >
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4 dark:border-slate-800">
+                      <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <i data-lucide="monitor" class="text-google-blue h-4.5 w-4.5"></i> 내 공유 화면 모니터링
+                      </h4>
+                      <span class="rounded bg-google-blue/10 px-2 py-0.5 text-[10px] font-semibold text-google-blue">실시간 공유 중</span>
+                    </div>
+
+                    <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 dark:border-slate-800">
+                      ${this.screenStream
+                        ? html`
+                            <video
+                              class="h-full w-full object-contain"
+                              .srcObject=${this.screenStream}
+                              autoplay
+                              muted
+                              playsinline
+                            ></video>
+                          `
+                        : html`
+                            <div class="flex h-full w-full flex-col items-center justify-center text-slate-400">
+                              <i data-lucide="monitor-off" class="h-10 w-10 mb-2"></i>
+                              <span class="text-xs">공유 화면이 없습니다.</span>
+                            </div>
+                          `}
+                    </div>
+                  </div>
+
                 </div>
-                <ll-chat
-                  .chatMessages=${this.chatMessages}
-                  .viewerCount=${this.viewerCount}
-                  .participants=${this.activeParticipants}
-                  .myNickname=${this.currentNickname}
-                  @send-message=${this.onSendMessage}
-                  class="block w-full xl:col-span-4"
-                ></ll-chat>
+
+                <!-- Bottom Section: Chat Room taking full width -->
+                <div class="w-full">
+                  <ll-chat
+                    .chatMessages=${this.chatMessages}
+                    .viewerCount=${this.viewerCount}
+                    .participants=${this.activeParticipants}
+                    .myNickname=${this.currentNickname}
+                    @send-message=${this.onSendMessage}
+                    class="block w-full"
+                  ></ll-chat>
+                </div>
               </div>
             `
           : ""}
@@ -1279,9 +1332,11 @@ export class MyElement extends LitElement {
           >
             <i data-lucide="user-plus" class="h-6 w-6"></i>
           </div>
-          <h3 class="text-md text-center font-bold text-slate-800 dark:text-white">사내 대화명 설정</h3>
+          <h3 class="text-md text-center font-bold text-slate-800 dark:text-white">
+            공유 대화명 설정
+          </h3>
           <p class="mt-1 text-center text-xs leading-relaxed text-slate-500">
-            LANLink는 회원가입 정보 대신 일회성 닉네임을 사용합니다.<br />대화명을 입력해 주세요.
+            LANLink는 일회성 닉네임을 사용합니다.<br />대화명을 입력해 주세요.
           </p>
 
           <div class="my-4">

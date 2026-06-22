@@ -28,11 +28,10 @@ export class LlHero extends LitElement {
         <div class="space-y-4 text-center">
           <h1 class="text-4xl leading-[1.15] font-extrabold tracking-tight text-slate-900 md:text-5xl dark:text-white">
             안전하고 자유로운 <br />
-            <span class="text-google-blue">빠른 화면 공유</span> 및 제어
+            <span class="text-google-blue">초고속 화면 공유</span> 서비스
           </h1>
           <p class="text-md mx-auto max-w-lg leading-relaxed text-slate-500 md:text-lg dark:text-slate-400">
-            <i class="text-google-blue text-xl font-bold dark:text-blue-400">LAN</i>을 통해 딜레이 없는<br />
-            초고화질 화면 공유를 경험해 보세요.
+            <i class="text-google-blue text-xl font-bold dark:text-blue-400">LAN</i>을 통해 딜레이 없는<br />초고속 화면 공유를 경험해 보세요.
           </p>
         </div>
 
