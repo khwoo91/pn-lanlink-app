@@ -40,7 +40,7 @@ export default defineConfig({
           const url = new URL(request.url || '', `http://${request.headers.host}`);
           if (url.pathname === '/pn-lanlink-app/signaling') {
             wss.handleUpgrade(request, socket, head, (ws: any) => {
-              wss.emit('connection', ws, request);
+              (wss as any).emit('connection', ws, request);
             });
           }
         });
