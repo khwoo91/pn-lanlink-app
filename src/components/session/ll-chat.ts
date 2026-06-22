@@ -42,16 +42,14 @@ export class LlChat extends LitElement {
                 <span id="chat-user-count">${this.participants.length || this.viewerCount + 1}</span>명
               </span>
             </div>
-            <span class="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] text-emerald-500"
-              >P2P 암호화</span
-            >
+            <span class="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] text-emerald-500">보안됨</span>
           </div>
 
           <!-- 실시간 참여자 목록 노출 -->
           ${this.participants.length > 0
             ? html`
                 <div class="flex items-center gap-1 truncate text-[10px] text-slate-400 dark:text-slate-500">
-                  <span class="shrink-0 font-bold text-slate-500">참여자:</span>
+                  <span class="shrink-0 font-bold text-slate-500">참여 인원:</span>
                   <span class="truncate">${this.participants.join(", ")}</span>
                 </div>
               `

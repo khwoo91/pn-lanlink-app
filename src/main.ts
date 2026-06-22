@@ -201,7 +201,9 @@ export class MyElement extends LitElement {
   }
 
   private updateParticipants() {
-    const list = [this.currentNickname, ...Array.from(this.hostViewerNicknames.values())];
+    const rawList = [this.currentNickname, ...Array.from(this.hostViewerNicknames.values())];
+    // Remove duplicate participant nicknames (e.g. from duplicate tabs or reconnecting states)
+    const list = Array.from(new Set(rawList));
     this.activeParticipants = list;
     this.viewerCount = this.hostConnections.size;
 
@@ -350,6 +352,16 @@ export class MyElement extends LitElement {
     const pc = new RTCPeerConnection({
       iceServers: ICE_SERVERS,
     });
+
+    pc.onconnectionstatechange = () => {
+      if (
+        pc.connectionState === "disconnected" ||
+        pc.connectionState === "failed" ||
+        pc.connectionState === "closed"
+      ) {
+        this.handlePeerLeave(viewerId);
+      }
+    };
 
     this.hostConnections.set(viewerId, pc);
     this.hostViewerNicknames.set(viewerId, nickname || "참여자");
@@ -946,7 +958,7 @@ export class MyElement extends LitElement {
   }
 
   // --- Idle Safeguard Timer ---
-  private simulateIdleTrigger() {
+  simulateIdleTrigger() {
     this.idleSafeguardOpen = true;
     this.idleCountdown = 60;
     this.showToast("대역폭 절약 모드가 시작되었습니다. 1분간 반응 없을 시 자동 종료됩니다.");
@@ -1115,38 +1127,38 @@ export class MyElement extends LitElement {
                     <div class="space-y-6">
                       <!-- Title & Participant count -->
                       <div class="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
-                        <div class="flex items-center gap-3">
-                          <span class="relative flex h-3 w-3">
+                        <div class="flex items-start gap-3">
+                          <span class="relative top-1.5 flex h-3 w-3">
                             <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
                             <span class="relative inline-flex h-3 w-3 rounded-full bg-red-500"></span>
                           </span>
                           <div>
                             <h4 class="text-md font-bold text-slate-900 dark:text-white">
-                              화면공유 가동 중
+                              화면공유 중
                             </h4>
                             <p class="text-xs text-slate-500">P2P 스트리밍이 가동되고 있습니다.</p>
                           </div>
                         </div>
                       </div>
 
-                      <div class="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                      <div class="flex flex-col gap-2">
                         <!-- QR Code -->
                         <div class="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center sm:col-span-5 dark:border-slate-800 dark:bg-slate-950">
-                          <div class="mb-2 flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800">
+                          <div class="mb-1 flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800">
                             <img
                               src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(this.getShareUrl())}"
-                              class="h-20 w-20 rounded-lg"
+                              class="h-36 w-36 rounded-lg"
                               alt="Share QR Code"
                             />
                           </div>
                           <span class="text-[10px] text-slate-400">간편 QR 코드</span>
-                          <div class="text-sm text-google-blue mt-0.5 font-bold tracking-wider">${this.activeRoomCode}</div>
+                          <div class="text-2xl text-google-blue font-bold tracking-wider">${this.activeRoomCode}</div>
                         </div>
 
                         <!-- Link & Info -->
                         <div class="flex flex-col justify-between gap-3 sm:col-span-7">
                           <div class="space-y-1">
-                            <span class="text-[11px] font-bold tracking-wider text-slate-500 uppercase">접속 공유 링크</span>
+                            <span class="text-[11px] ml-2 font-bold tracking-wider text-slate-500 uppercase">접속 공유 링크</span>
                             <div class="flex items-center gap-2">
                               <div class="grow rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] break-all text-slate-600 select-all dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
                                 ${this.getShareUrl()}
@@ -1160,21 +1172,10 @@ export class MyElement extends LitElement {
                               </button>
                             </div>
                           </div>
-
-                          <div class="flex max-w-md items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-slate-800 dark:bg-slate-950">
-                            <i data-lucide="users" class="text-google-blue h-4 w-4 shrink-0"></i>
-                            <span class="truncate font-semibold text-slate-600 dark:text-slate-300">
-                              참여자:
-                              <span class="text-google-blue font-bold">
-                                ${this.activeParticipants.length > 1 ? this.activeParticipants.slice(1).join(", ") : "없음"}
-                              </span>
-                              (${this.viewerCount + 1}명)
-                            </span>
-                          </div>
                         </div>
                       </div>
 
-                      <div class="bg-google-blue/5 border-google-blue/10 space-y-1 rounded-xl border p-3.5 text-[11px] text-slate-500">
+                      <!-- <div class="bg-google-blue/5 border-google-blue/10 space-y-1 rounded-xl border p-3.5 text-[11px] text-slate-500">
                         <p class="text-google-blue flex items-center gap-1 font-bold">
                           <i data-lucide="lock" class="h-3.5 w-3.5"></i>
                           보안 기밀 보호 작동 중
@@ -1182,33 +1183,10 @@ export class MyElement extends LitElement {
                         <p class="leading-relaxed">
                           설정된 비밀번호가 안전하게 설정되었습니다.
                         </p>
-                      </div>
+                      </div> -->
                     </div>
 
-                    <div class="flex flex-col gap-2 border-t border-slate-200 pt-4 mt-6 dark:border-slate-800">
-                      <!-- Action buttons: Change Share Screen / Stop sharing -->
-                      <div class="flex flex-col gap-2 sm:flex-row">
-                        <button
-                          @click=${this.changeSharedScreen}
-                          class="flex grow items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-xs font-bold text-google-blue transition hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400"
-                        >
-                          <i data-lucide="screen-share" class="h-4 w-4"></i> 공유 화면 변경
-                        </button>
-                        <button
-                          @click=${this.stopSharing}
-                          class="flex items-center justify-center gap-2 rounded-lg bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-100"
-                        >
-                          <i data-lucide="square" class="h-3.5 w-3.5 fill-rose-600"></i>
-                          공유 종료하기
-                        </button>
-                      </div>
-                      <div class="flex items-center justify-between text-[11px] text-slate-400 mt-2">
-                        <span>테스트 기능:</span>
-                        <button @click=${this.simulateIdleTrigger} class="text-google-blue font-bold hover:underline">
-                          미접속 30분 초과 연출 ⚡
-                        </button>
-                      </div>
-                    </div>
+
                   </div>
 
                   <!-- Right: Host Screen Video Preview (7/12) -->
@@ -1217,7 +1195,8 @@ export class MyElement extends LitElement {
                   >
                     <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4 dark:border-slate-800">
                       <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <i data-lucide="monitor" class="text-google-blue h-4.5 w-4.5"></i> 내 공유 화면 모니터링
+                        <i data-lucide="monitor" class="text-google-blue h-4.5 w-4.5"></i>
+                        현재 공유된 화면
                       </h4>
                       <span class="rounded bg-google-blue/10 px-2 py-0.5 text-[10px] font-semibold text-google-blue">실시간 공유 중</span>
                     </div>
@@ -1239,6 +1218,26 @@ export class MyElement extends LitElement {
                               <span class="text-xs">공유 화면이 없습니다.</span>
                             </div>
                           `}
+                    </div>
+
+
+                                        <div class="flex flex-col gap-2 border-t border-slate-200 pt-4 mt-6 dark:border-slate-800">
+                      <!-- Action buttons: Change Share Screen / Stop sharing -->
+                      <div class="flex flex-col gap-2 sm:flex-row">
+                        <button
+                          @click=${this.changeSharedScreen}
+                          class="flex grow items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-xs font-bold text-google-blue transition hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400"
+                        >
+                          <i data-lucide="screen-share" class="h-4 w-4"></i> 공유 화면 변경
+                        </button>
+                        <button
+                          @click=${this.stopSharing}
+                          class="flex items-center justify-center gap-2 rounded-lg bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-100"
+                        >
+                          <i data-lucide="square" class="h-3.5 w-3.5 fill-rose-600"></i>
+                          공유 종료하기
+                        </button>
+                      </div>
                     </div>
                   </div>
 
