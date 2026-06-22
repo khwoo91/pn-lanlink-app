@@ -66,7 +66,7 @@ export class LlHeader extends LitElement {
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span class="text-slate-600 dark:text-slate-300 font-medium">192.168.1.45</span>
+              <span class="text-slate-600 dark:text-slate-300 font-medium">${window.location.hostname}</span>
             </div>
 
             <!-- PRO plan badge/button -->

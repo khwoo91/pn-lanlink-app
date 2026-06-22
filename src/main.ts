@@ -20,7 +20,7 @@ import { getTheme, setTheme, getNickname, setNickname } from './utils/storage';
 import { hashPassword, verifyPassword } from './utils/crypto';
 import { captureScreen, stopMediaStream } from './infrastructure/webrtc-stream';
 import { captureMicrophone, setStreamAudioEnabled } from './infrastructure/voip-audio';
-import { mockRooms, scanLocalNetworkRooms, registerRoom, unregisterRoom, getActiveRooms } from './infrastructure/mdns-signaling';
+import { mockRooms } from './infrastructure/mdns-signaling';
 import type { LANRoom } from './infrastructure/mdns-signaling';
 
 @customElement('my-element')
@@ -90,7 +90,7 @@ export class MyElement extends LitElement {
   private micStream: MediaStream | null = null;
 
   // WebRTC & Signaling properties
-  private signalingChannel: BroadcastChannel | null = null;
+  private websocket: WebSocket | null = null;
   private viewerId: string = Math.random().toString(36).substring(2, 9);
   private hostConnections = new Map<string, RTCPeerConnection>();
   private hostDataChannels = new Map<string, RTCDataChannel>();
@@ -107,38 +107,12 @@ export class MyElement extends LitElement {
     this.applyTheme(this.currentTheme);
     this.currentNickname = getNickname() || '참여자';
 
-    // Trigger local scan simulation
-    this.scanRooms();
-
     // Start auto carousel cycling every 5 seconds
     this.startCarouselInterval();
 
-    window.addEventListener('storage', this.handleStorageChange);
     window.addEventListener('beforeunload', this.handleBeforeUnload);
 
-    this.signalingChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('lanlink-signaling-channel') : null;
-    if (this.signalingChannel) {
-      this.signalingChannel.onmessage = async (event) => {
-        const msg = event.data;
-        if (!msg || (msg.to !== 'host' && msg.to !== this.viewerId && msg.to !== 'all')) return;
-
-        try {
-          if (msg.type === 'join-request') {
-            await this.handleJoinRequest(msg.from, msg.nickname);
-          } else if (msg.type === 'offer') {
-            await this.handleOffer(msg.from, msg.sdp);
-          } else if (msg.type === 'answer') {
-            await this.handleAnswer(msg.from, msg.sdp);
-          } else if (msg.type === 'candidate') {
-            await this.handleIceCandidate(msg.from, msg.candidate);
-          } else if (msg.type === 'leave') {
-            this.handlePeerLeave(msg.from);
-          }
-        } catch (err) {
-          console.error('Error handling signaling message:', err);
-        }
-      };
-    }
+    this.initWebSocketSignaling();
 
     // URL 파라미터 체크 (?room=LNK-XXX-XX)
     const params = new URLSearchParams(window.location.search);
@@ -146,9 +120,9 @@ export class MyElement extends LitElement {
     if (roomParam) {
       setTimeout(() => {
         this.showToast(`🔗 공유방 링크 감지: ${roomParam}번 방에 입장을 시도합니다.`);
-        const rooms = getActiveRooms();
-        const room = rooms.find(r => r.name.includes(roomParam) || r.ip === '192.168.1.45');
-        const targetIp = room ? room.ip : '192.168.1.45';
+        const rooms = this.scannedRooms;
+        const room = rooms.find(r => r.name.includes(roomParam) || r.ip === window.location.hostname);
+        const targetIp = room ? room.ip : window.location.hostname;
         const targetLocked = room ? room.locked : true;
         const targetName = room ? room.name : `공유 회의방 (${roomParam})`;
         this.checkPasswordAndJoin(targetName, targetIp, targetLocked);
@@ -164,7 +138,7 @@ export class MyElement extends LitElement {
       clearTimeout(this.toastTimeout);
     }
     if (this.currentScreen === 'host') {
-      unregisterRoom('192.168.1.45');
+      this.sendSignalingMessage({ type: 'room-unregister', ip: window.location.hostname });
       this.sendSignalingMessage({ type: 'leave', from: 'host', to: 'all' });
     } else if (this.currentScreen === 'viewer') {
       this.sendSignalingMessage({ type: 'leave', from: this.viewerId, to: 'host' });
@@ -184,30 +158,96 @@ export class MyElement extends LitElement {
     }
     this.activeStream = null;
 
-    window.removeEventListener('storage', this.handleStorageChange);
+    if (this.websocket) {
+      this.websocket.close();
+      this.websocket = null;
+    }
+
     window.removeEventListener('beforeunload', this.handleBeforeUnload);
     super.disconnectedCallback();
   }
 
-  private handleStorageChange = (e: StorageEvent) => {
-    if (e.key === 'lanlink_active_rooms') {
-      this.scanRooms();
-    }
-  };
-
   private handleBeforeUnload = () => {
     if (this.currentScreen === 'host') {
-      unregisterRoom('192.168.1.45');
+      this.sendSignalingMessage({ type: 'room-unregister', ip: window.location.hostname });
       this.sendSignalingMessage({ type: 'leave', from: 'host', to: 'all' });
     } else if (this.currentScreen === 'viewer') {
       this.sendSignalingMessage({ type: 'leave', from: this.viewerId, to: 'host' });
     }
   };
 
+  private initWebSocketSignaling() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const signalingUrl = `${protocol}//${window.location.host}/pn-lanlink-app/signaling`;
+
+    const socket = new WebSocket(signalingUrl);
+
+    socket.onopen = () => {
+      console.log('WebSocket signaling connected.');
+      this.websocket = socket;
+
+      if (this.currentScreen === 'host') {
+        this.sendSignalingMessage({
+          type: 'room-register',
+          from: 'host',
+          to: 'server',
+          room: {
+            name: `${this.currentNickname} 님의 방`,
+            ip: window.location.hostname,
+            locked: this.isRoomLocked,
+            fps: 30
+          }
+        });
+      }
+    };
+
+    socket.onmessage = async (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+
+        if (msg.type === 'room-list-response') {
+          this.scannedRooms = msg.rooms;
+          return;
+        }
+
+        if (msg.to !== 'host' && msg.to !== this.viewerId && msg.to !== 'all') return;
+        if (msg.from === this.viewerId) return;
+
+        if (msg.type === 'join-request') {
+          await this.handleJoinRequest(msg.from, msg.nickname);
+        } else if (msg.type === 'offer') {
+          await this.handleOffer(msg.from, msg.sdp);
+        } else if (msg.type === 'answer') {
+          await this.handleAnswer(msg.from, msg.sdp);
+        } else if (msg.type === 'candidate') {
+          await this.handleIceCandidate(msg.from, msg.candidate);
+        } else if (msg.type === 'leave') {
+          this.handlePeerLeave(msg.from);
+        }
+      } catch (err) {
+        console.error('Error handling WebSocket message in client:', err);
+      }
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket signaling disconnected. Retrying in 3s...');
+      this.websocket = null;
+      setTimeout(() => {
+        if (this.isConnected) {
+          this.initWebSocketSignaling();
+        }
+      }, 3000);
+    };
+
+    socket.onerror = (err) => {
+      console.error('WebSocket error:', err);
+    };
+  }
+
   // --- WebRTC Signaling Helpers ---
   private sendSignalingMessage(msg: any) {
-    if (this.signalingChannel) {
-      this.signalingChannel.postMessage(msg);
+    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+      this.websocket.send(JSON.stringify(msg));
     }
   }
 
@@ -387,10 +427,7 @@ export class MyElement extends LitElement {
     };
   }
 
-  // --- Network Scanning ---
-  private async scanRooms() {
-    this.scannedRooms = await scanLocalNetworkRooms();
-  }
+
 
   // --- Theme Manager ---
   private applyTheme(theme: string) {
@@ -493,13 +530,18 @@ export class MyElement extends LitElement {
     this.viewerCount = 0;
     this.showToast('🚀 회의 화면 공유 스트리밍이 정상 개설되었습니다!');
 
-    registerRoom({
-      name: `${this.currentNickname} 님의 방`,
-      ip: '192.168.1.45',
-      locked: this.isRoomLocked,
-      fps: 30
+    // Register room via WebSocket signaling
+    this.sendSignalingMessage({
+      type: 'room-register',
+      from: 'host',
+      to: 'server',
+      room: {
+        name: `${this.currentNickname} 님의 방`,
+        ip: window.location.hostname,
+        locked: this.isRoomLocked,
+        fps: 30
+      }
     });
-    this.scanRooms();
 
     // Simulate other users joining the meeting after a few seconds
     setTimeout(() => {
@@ -524,8 +566,13 @@ export class MyElement extends LitElement {
     this.cleanupMediaStreams();
     this.showToast('⏹️ 화면 공유 방송을 종료하고 메인으로 대기합니다.');
 
-    unregisterRoom('192.168.1.45');
-    this.scanRooms();
+    // Unregister room via WebSocket signaling
+    this.sendSignalingMessage({
+      type: 'room-unregister',
+      from: 'host',
+      to: 'server',
+      ip: window.location.hostname
+    });
   }
 
   // --- Room Join (Guest Viewer Mode) Simulation ---
@@ -547,19 +594,15 @@ export class MyElement extends LitElement {
       }
     }
 
-    const rooms = getActiveRooms();
+    const rooms = this.scannedRooms;
     const foundRoom = rooms.find(r => r.ip === code || r.name.includes(code));
 
     if (foundRoom) {
       this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked);
-    } else if (code.includes('192.168.1.12') || code.includes('992') || code.includes('철수')) {
-      this.checkPasswordAndJoin('김철수 시니어', '192.168.1.12', true);
-    } else if (code.includes('192.168.1.84') || code.includes('나리')) {
-      this.checkPasswordAndJoin('박나리 수석', '192.168.1.84', false);
-    } else if (code === this.activeRoomCode || code.includes('192.168.1.45')) {
-      this.checkPasswordAndJoin(`${this.currentNickname} 님의 방`, '192.168.1.45', this.isRoomLocked);
+    } else if (code === this.activeRoomCode || code === window.location.hostname) {
+      this.checkPasswordAndJoin(`${this.currentNickname} 님의 방`, window.location.hostname, this.isRoomLocked);
     } else {
-      this.checkPasswordAndJoin('박나리 수석', '192.168.1.84', false);
+      this.showToast('⚠️ 해당 주소의 활성 방을 찾을 수 없습니다.');
     }
   }
 
