@@ -278,7 +278,9 @@ export class MyElement extends LitElement {
         if (msg.from === this.viewerId) return;
 
         if (msg.type === 'join-request') {
-          await this.handleJoinRequest(msg.from, msg.nickname);
+          if (this.currentScreen === 'host' && msg.roomCode === this.activeRoomCode) {
+            await this.handleJoinRequest(msg.from, msg.nickname);
+          }
         } else if (msg.type === 'offer') {
           await this.handleOffer(msg.from, msg.sdp);
         } else if (msg.type === 'answer') {
@@ -662,12 +664,14 @@ export class MyElement extends LitElement {
     const foundRoom = rooms.find(r => r.ip === code || r.code === code || r.name.includes(code));
 
     if (foundRoom) {
+      this.pendingRoomJoinCode = foundRoom.code;
       this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked);
-    } else if (code === window.location.hostname || code === this.serverDetectedIp) {
-      const targetIp = this.serverDetectedIp || window.location.hostname;
-      this.checkPasswordAndJoin(`${this.currentNickname} 님의 방`, targetIp, this.isRoomLocked);
     } else {
-      this.showToast('⚠️ 해당 주소의 활성 방을 찾을 수 없습니다.');
+      // 대기방 목록에 없더라도 입력된 숫자를 룸 번호로 간주하여 강제 다이렉트 조인 시도
+      this.pendingRoomJoinCode = code;
+      const params = new URLSearchParams(window.location.search);
+      const ipParam = params.get('ip') || window.location.hostname;
+      this.checkPasswordAndJoin(`공유 회의방 (${code})`, ipParam, false);
     }
   }
 
@@ -711,12 +715,13 @@ export class MyElement extends LitElement {
       { sender: 'System', content: '📢 보안 안내: 해당 대화 내역은 외부 서버에 저장되지 않고 WebRTC 패킷으로 흐르며, 방 종료 즉시 메모리에서 완벽하게 파기됩니다.', system: true }
     ];
 
-    // Send Join Request to Host via signaling
+    // Send Join Request to Host via signaling (방 코드를 패킷에 실어서 송신)
     setTimeout(() => {
       this.sendSignalingMessage({
         type: 'join-request',
         from: this.viewerId,
         to: 'host',
+        roomCode: this.pendingRoomJoinCode || this.activeRoomCode,
         nickname: this.currentNickname
       });
     }, 500);
