@@ -321,7 +321,7 @@ export class MyElement extends LitElement {
     if (this.currentScreen !== 'host') return;
 
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19002' }]
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
 
     this.hostConnections.set(viewerId, pc);
@@ -387,7 +387,7 @@ export class MyElement extends LitElement {
     if (this.currentScreen !== 'viewer') return;
 
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19002' }]
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
     this.viewerConnection = pc;
 
