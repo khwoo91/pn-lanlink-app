@@ -194,6 +194,7 @@ export class MyElement extends LitElement {
           room: {
             name: `${this.currentNickname} 님의 방`,
             ip: window.location.hostname,
+            code: this.activeRoomCode,
             locked: this.isRoomLocked,
             fps: 30
           }
@@ -538,6 +539,7 @@ export class MyElement extends LitElement {
       room: {
         name: `${this.currentNickname} 님의 방`,
         ip: window.location.hostname,
+        code: this.activeRoomCode,
         locked: this.isRoomLocked,
         fps: 30
       }
@@ -595,11 +597,11 @@ export class MyElement extends LitElement {
     }
 
     const rooms = this.scannedRooms;
-    const foundRoom = rooms.find(r => r.ip === code || r.name.includes(code));
+    const foundRoom = rooms.find(r => r.ip === code || r.code === code || r.name.includes(code));
 
     if (foundRoom) {
       this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked);
-    } else if (code === this.activeRoomCode || code === window.location.hostname) {
+    } else if (code === window.location.hostname) {
       this.checkPasswordAndJoin(`${this.currentNickname} 님의 방`, window.location.hostname, this.isRoomLocked);
     } else {
       this.showToast('⚠️ 해당 주소의 활성 방을 찾을 수 없습니다.');

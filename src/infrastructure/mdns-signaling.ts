@@ -1,6 +1,7 @@
 export interface LANRoom {
   name: string;
   ip: string;
+  code: string;
   locked: boolean;
   fps: number;
 }
