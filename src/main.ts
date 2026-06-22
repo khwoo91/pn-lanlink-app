@@ -1202,6 +1202,12 @@ export class MyElement extends LitElement {
                           공유 종료하기
                         </button>
                       </div>
+                      <div class="flex items-center justify-between text-[11px] text-slate-400 mt-2">
+                        <span>테스트 기능:</span>
+                        <button @click=${this.simulateIdleTrigger} class="text-google-blue font-bold hover:underline">
+                          미접속 30분 초과 연출 ⚡
+                        </button>
+                      </div>
                     </div>
                   </div>
 
