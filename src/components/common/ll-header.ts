@@ -1,11 +1,31 @@
 import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { createIcons } from "lucide";
 import { globalIcons } from "../../utils/icons";
 
 @customElement("ll-header")
 export class LlHeader extends LitElement {
-  updated() {
+  @state() private themeDropdownOpen = false;
+
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener("click", this.handleOutsideClick);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener("click", this.handleOutsideClick);
+  }
+
+  private handleOutsideClick = (e: MouseEvent) => {
+    if (!this.themeDropdownOpen) return;
+    const dropdown = this.querySelector(".theme-dropdown-container");
+    if (dropdown && !dropdown.contains(e.target as Node)) {
+      this.themeDropdownOpen = false;
+    }
+  };
+
+  firstUpdated() {
     createIcons({
       icons: globalIcons,
       root: this,
@@ -17,84 +37,116 @@ export class LlHeader extends LitElement {
 
   @property({ type: String }) currentNickname = "참여자";
   @property({ type: String }) currentTheme = "light";
+  @property({ type: Boolean }) isSignalingConnected = false;
 
   render() {
     return html`
       <header
-        class="border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 transition-colors duration-200"
+        class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900/90"
       >
-        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <!-- Logo -->
-          <div @click=${this.onLogoClick} class="flex items-center space-x-3 cursor-pointer select-none">
-            <div class="w-9 h-9 rounded-lg bg-google-blue flex items-center justify-center shadow-md">
-              <i data-lucide="zap" class="w-5 h-5 text-white"></i>
+          <div @click=${this.onLogoClick} class="flex cursor-pointer items-center space-x-3 select-none">
+            <div class="bg-google-blue flex h-9 w-9 items-center justify-center rounded-lg shadow-md">
+              <i data-lucide="zap" class="h-5 w-5 text-white"></i>
             </div>
             <div class="flex items-baseline space-x-2">
               <span class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">LANLink</span>
               <span
-                class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold"
-                >v1.1.11</span
+                class="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800"
+                >v1.2.1</span
               >
-              <span class="text-[11px] text-slate-500 font-medium hidden sm:inline">사내망 다이렉트 제어</span>
+              <span class="hidden text-[11px] font-medium text-slate-500 sm:inline">다이렉트 화면공유 및 제어</span>
             </div>
           </div>
 
           <!-- Actions -->
           <div class="flex items-center space-x-2 md:space-x-3">
+            <!-- LAN state -->
+            <div class="items-center space-x-1.5 text-[13px] transition-colors md:flex">
+              <span class="relative flex h-2 w-2">
+                ${this.isSignalingConnected
+                  ? html`
+                      <span
+                        class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
+                      ></span>
+                      <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                    `
+                  : html` <span class="relative inline-flex h-2 w-2 rounded-full bg-rose-500"></span> `}
+              </span>
+              <span
+                class="${this.isSignalingConnected
+                  ? "text-slate-600 dark:text-slate-300"
+                  : "text-rose-500 dark:text-rose-400"} font-medium"
+              >
+                ${this.isSignalingConnected ? "연결중" : "연결 실패"}
+              </span>
+            </div>
+
+            <!-- Custom Theme Dropdown Select Option -->
+            <div class="theme-dropdown-container relative">
+              <button
+                @click=${this.toggleThemeDropdown}
+                class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-1.5 py-1.5 text-xs font-semibold text-slate-700 transition select-none hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                ${this.currentTheme === "light" ? html`<i data-lucide="sun" class="h-4.5 w-4.5"></i>` : ""}
+                ${this.currentTheme === "dark" ? html`<i data-lucide="moon" class="h-4.5 w-4.5"></i>` : ""}
+                ${this.currentTheme === "system" ? html`<i data-lucide="monitor" class="h-4.5 w-4.5"></i>` : ""}
+              </button>
+
+              <div
+                class="${this.themeDropdownOpen
+                  ? ""
+                  : "hidden"} absolute right-0 mt-1.5 w-28 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+              >
+                <button
+                  @click=${() => this.selectTheme("light")}
+                  class="flex w-full items-center justify-between px-3 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  <span class="flex items-center gap-2"><i data-lucide="sun" class="h-3.5 w-3.5"></i> 라이트</span>
+                  ${this.currentTheme === "light"
+                    ? html`<i data-lucide="check" class="text-google-blue h-3 w-3"></i>`
+                    : ""}
+                </button>
+                <button
+                  @click=${() => this.selectTheme("dark")}
+                  class="flex w-full items-center justify-between px-3 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  <span class="flex items-center gap-2"><i data-lucide="moon" class="h-3.5 w-3.5"></i> 다크</span>
+                  ${this.currentTheme === "dark"
+                    ? html`<i data-lucide="check" class="text-google-blue h-3 w-3"></i>`
+                    : ""}
+                </button>
+                <button
+                  @click=${() => this.selectTheme("system")}
+                  class="flex w-full items-center justify-between px-3 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  <span class="flex items-center gap-2"><i data-lucide="monitor" class="h-3.5 w-3.5"></i> 시스템</span>
+                  ${this.currentTheme === "system"
+                    ? html`<i data-lucide="check" class="text-google-blue h-3 w-3"></i>`
+                    : ""}
+                </button>
+              </div>
+            </div>
+
             <!-- Nickname -->
             <div
-              class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 text-xs transition-colors"
+              class="flex items-center space-x-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs transition-colors dark:border-slate-700 dark:bg-slate-800"
             >
-              <div class="w-4 h-4 rounded-full bg-google-blue/10 text-google-blue flex items-center justify-center">
-                <i data-lucide="user" class="w-3.5 h-3.5"></i>
+              <div class="bg-google-blue/10 text-google-blue flex h-4 w-4 items-center justify-center rounded-full">
+                <i data-lucide="user" class="h-3.5 w-3.5"></i>
               </div>
-              <span class="text-slate-500 dark:text-slate-400 hidden sm:inline">내 닉네임:</span>
-              <strong class="text-slate-800 dark:text-slate-200 font-bold max-w-20 truncate">${this.currentNickname}</strong>
-              <button @click=${this.onEditNickname} class="text-slate-400 hover:text-google-blue p-0.5 rounded transition" title="닉네임 수정">
-                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-              </button>
-            </div>
-
-            <!-- Theme Toggles -->
-            <div class="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex items-center border border-slate-200 dark:border-slate-700">
-              <button
-                @click=${() => this.onThemeChange("light")}
-                class="p-1.5 rounded-md transition ${this.currentTheme === "light"
-                  ? "bg-white dark:bg-slate-950 text-google-blue shadow-sm"
-                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"}"
-                title="밝은 테마"
+              <span class="hidden text-slate-500 sm:inline dark:text-slate-400">내 닉네임:</span>
+              <strong class="max-w-20 truncate font-bold text-slate-800 dark:text-slate-200"
+                >${this.currentNickname}</strong
               >
-                <i data-lucide="sun" class="w-3.5 h-3.5"></i>
-              </button>
               <button
-                @click=${() => this.onThemeChange("dark")}
-                class="p-1.5 rounded-md transition ${this.currentTheme === "dark"
-                  ? "bg-white dark:bg-slate-950 text-google-blue shadow-sm"
-                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"}"
-                title="어두운 테마"
+                @click=${this.onEditNickname}
+                class="hover:text-google-blue rounded p-0.5 text-slate-400 transition"
+                title="닉네임 수정"
               >
-                <i data-lucide="moon" class="w-3.5 h-3.5"></i>
+                <i data-lucide="pencil" class="h-3.5 w-3.5"></i>
               </button>
-              <button
-                @click=${() => this.onThemeChange("system")}
-                class="p-1.5 rounded-md transition ${this.currentTheme === "system"
-                  ? "bg-white dark:bg-slate-950 text-google-blue shadow-sm"
-                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"}"
-                title="시스템 테마 연동"
-              >
-                <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
-              </button>
-            </div>
-
-            <!-- LAN state -->
-            <div
-              class="hidden md:flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800/60 px-2.5 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 transition-colors text-[11px]"
-            >
-              <span class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span class="text-slate-600 dark:text-slate-300 font-medium">${window.location.hostname}</span>
             </div>
 
             <!-- PRO plan badge/button -->
@@ -118,7 +170,7 @@ export class LlHeader extends LitElement {
         detail: { theme },
         bubbles: true,
         composed: true,
-      }),
+      })
     );
   }
 
@@ -128,6 +180,23 @@ export class LlHeader extends LitElement {
 
   private onLogoClick() {
     this.dispatchEvent(new CustomEvent("logo-click", { bubbles: true, composed: true }));
+  }
+
+  private toggleThemeDropdown(e: Event) {
+    e.stopPropagation();
+    this.themeDropdownOpen = !this.themeDropdownOpen;
+  }
+
+  private selectTheme(theme: string) {
+    this.themeDropdownOpen = false;
+    this.onThemeChange(theme);
+    // Re-create icons inside dropdown
+    setTimeout(() => {
+      createIcons({
+        icons: globalIcons,
+        root: this,
+      });
+    }, 0);
   }
 }
 

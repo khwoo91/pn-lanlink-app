@@ -8,7 +8,7 @@ export interface ChatMessagePacket {
  * Sends a message object over WebRTC RTCDataChannel.
  */
 export function sendDataChannelMessage(dataChannel: RTCDataChannel | null, packet: ChatMessagePacket): boolean {
-  if (dataChannel && dataChannel.readyState === 'open') {
+  if (dataChannel && dataChannel.readyState === "open") {
     try {
       dataChannel.send(JSON.stringify(packet));
       return true;

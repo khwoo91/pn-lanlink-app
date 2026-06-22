@@ -1,22 +1,49 @@
-import { LitElement, html } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import { createIcons } from 'lucide';
-import { globalIcons } from '../../utils/icons';
+import { LitElement, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { createIcons } from "lucide";
+import { globalIcons } from "../../utils/icons";
 
-@customElement('ll-viewer')
+@customElement("ll-viewer")
 export class LlViewer extends LitElement {
-  updated() {
+  @state() private isFullScreen = false;
+
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener("fullscreenchange", this.onFullScreenChange);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener("fullscreenchange", this.onFullScreenChange);
+  }
+
+  private onFullScreenChange = () => {
+    this.isFullScreen = !!document.fullscreenElement;
+  };
+
+  firstUpdated() {
     createIcons({
       icons: globalIcons,
-      root: this
+      root: this,
     });
   }
+
+  updated(changedProperties: Map<string | number | symbol, unknown>) {
+    super.updated(changedProperties);
+    if (changedProperties.has("localMuted") || changedProperties.has("isFullScreen")) {
+      createIcons({
+        icons: globalIcons,
+        root: this,
+      });
+    }
+  }
+
   createRenderRoot() {
     return this;
   }
 
-  @property({ type: String }) activeRoomName = '';
-  @property({ type: String }) activeRoomIp = '';
+  @property({ type: String }) activeRoomName = "";
+  @property({ type: String }) activeRoomIp = "";
   @property({ type: Boolean }) localMuted = true;
   @property({ type: Boolean }) annotationVisible = false;
   @property({ type: Boolean }) cursorVisible = false;
@@ -25,148 +52,245 @@ export class LlViewer extends LitElement {
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
+  @property({ type: String }) myNickname = "참여자";
 
   @property({ attribute: false }) stream: MediaStream | null = null;
 
   render() {
-    const isChulsoo = this.activeRoomName.includes('김철수');
+    const isChulsoo = this.activeRoomName.includes("김철수");
 
     return html`
-      <div id="active-viewer-container" class="max-w-7xl mx-auto w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl animate-in zoom-in-95 duration-200">
-        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div
+        id="active-viewer-container"
+        class="animate-in zoom-in-95 mx-auto w-full max-w-7xl space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl duration-200 dark:border-slate-800 dark:bg-slate-900"
+      >
+        <div
+          class="flex flex-col justify-between gap-3 border-b border-slate-200 pb-3 sm:flex-row sm:items-center dark:border-slate-800"
+        >
           <div class="flex items-center gap-2">
-            <span class="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <h3 class="text-sm font-bold text-slate-800 dark:text-white">
-              <span id="target-host-name">${this.activeRoomName}</span> 님의 로컬 영상 및 음성 수신 중 (${this.activeRoomIp})
+            <span class="flex h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-emerald-500"></span>
+            <h3 class="text-xs leading-snug font-bold text-slate-800 sm:text-sm dark:text-white">
+              <span id="target-host-name">${this.activeRoomName}</span> 님의 로컬 영상 및 음성 수신 중
+              <span class="block text-[10px] text-slate-500 sm:inline sm:text-xs dark:text-slate-400"
+                >(${this.activeRoomIp})</span
+              >
             </h3>
           </div>
-          <div class="flex items-center gap-2 text-xs">
-            <span id="badge-control" class="${isChulsoo ? '' : 'hidden'} bg-google-blue/10 text-google-blue px-2.5 py-1 rounded-md border border-google-blue/20 font-semibold">
-              <i data-lucide="mouse-pointer" class="inline w-3 h-3 mr-1"></i> 원격제어
-            </span>
-            <span id="badge-draw" class="${isChulsoo ? '' : 'hidden'} bg-amber-500/10 text-amber-600 px-2.5 py-1 rounded-md border border-amber-500/20 font-semibold">
-              <i data-lucide="pen-tool" class="inline w-3 h-3 mr-1"></i> 필기 낙서
-            </span>
-            <button @click=${this.onLeaveSession} class="text-rose-500 hover:text-rose-700 font-semibold ml-2 transition">연결 끊기</button>
+          <div class="flex w-full items-center justify-between gap-2 text-xs sm:w-auto sm:justify-end">
+            <div class="flex items-center gap-1">
+              <span
+                id="badge-control"
+                class="${isChulsoo
+                  ? ""
+                  : "hidden"} bg-google-blue/10 text-google-blue border-google-blue/20 rounded border px-2 py-0.5 text-[10px] font-semibold sm:text-xs"
+              >
+                <i data-lucide="mouse-pointer" class="mr-0.5 inline h-3 w-3"></i> 제어
+              </span>
+              <span
+                id="badge-draw"
+                class="${isChulsoo
+                  ? ""
+                  : "hidden"} rounded border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 sm:text-xs"
+              >
+                <i data-lucide="pen-tool" class="mr-0.5 inline h-3 w-3"></i> 필기
+              </span>
+            </div>
+            <button
+              @click=${this.onLeaveSession}
+              class="shrink-0 text-xs font-semibold text-rose-600 transition hover:text-rose-400 sm:text-sm"
+            >
+              연결 끊기
+            </button>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
           <!-- Left: 16:9 Screen Capturer Screen (8/12) -->
-          <div class="xl:col-span-8 flex flex-col space-y-4">
-            <div class="relative bg-slate-900 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 aspect-video overflow-hidden group flex items-center justify-center w-full">
+          <div class="flex flex-col space-y-4 xl:col-span-8">
+            <div
+              id="video-wrapper"
+              class="dark:bg-slate-955 group ${this.isFullScreen
+                ? ""
+                : "rounded-2xl border border-slate-200 dark:border-slate-800"} relative flex aspect-video w-full items-center justify-center overflow-hidden bg-slate-900"
+            >
               <!-- Video Stream player (Shows when stream is available) -->
-              ${this.stream ? html`
-                <video 
-                  class="absolute inset-0 w-full h-full object-contain z-0" 
-                  .srcObject=${this.stream}
-                  autoplay 
-                  playsinline
-                ></video>
-              ` : html`
-                <!-- Mock visual diagrams / placeholder when connecting -->
-                <svg class="absolute inset-0 w-full h-full opacity-40 z-0" viewBox="0 0 800 450" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="20" y="20" width="200" height="15" rx="4" fill="#1a73e8"/>
-                  <rect x="20" y="45" width="340" height="12" rx="4" fill="#475569" class="dark:fill-[#334155]"/>
-                  <rect x="40" y="70" width="180" height="12" rx="4" fill="#475569" class="dark:fill-[#334155]"/>
-                  <rect x="60" y="95" width="260" height="12" rx="4" fill="#475569" class="dark:fill-[#334155]"/>
-                  
-                  <rect x="420" y="40" width="340" height="200" rx="12" fill="#e2e8f0" class="dark:fill-[#1E293B]" stroke="#94a3b8" class="dark:stroke-[#334155]" stroke-width="2"/>
-                  <circle cx="590" cy="140" r="40" fill="#1a73e8" fill-opacity="0.2" stroke="#1a73e8" stroke-width="3"/>
-                  <rect x="460" y="70" width="80" height="15" rx="4" fill="#1a73e8"/>
-                  <path d="M0 225H800M400 0V450" stroke="#94a3b8" stroke-opacity="0.2"/>
-                </svg>
-                
-                <!-- Nice Connecting / Loading text in the center -->
-                <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-10">
-                  <div class="inline-flex p-3 rounded-full bg-white/10 dark:bg-slate-900/10 border border-slate-200/20 mb-3 animate-spin">
-                    <i data-lucide="loader" class="w-8 h-8 text-google-blue"></i>
-                  </div>
-                  <h4 class="text-sm font-semibold text-white">화면 스트림 연결 중...</h4>
-                  <p class="text-xs text-slate-400 mt-1">호스트와 WebRTC direct 연결을 설정하고 있습니다</p>
-                </div>
-              `}
+              ${this.stream
+                ? html`
+                    <video
+                      class="absolute inset-0 z-0 h-full w-full object-contain"
+                      .srcObject=${this.stream}
+                      autoplay
+                      playsinline
+                    ></video>
+                  `
+                : html`
+                    <!-- Pulsing grey skeleton overlay when connecting -->
+                    <div class="absolute inset-0 z-0 flex flex-col justify-between">
+                      <!-- Nice Connecting / Loading text in the center -->
+                      <div class="absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-center">
+                        <div
+                          class="mb-3 inline-flex animate-spin rounded-full border border-slate-200/20 bg-white/10 p-3 dark:bg-slate-900/10"
+                        >
+                          <i data-lucide="loader" class="text-google-blue h-8 w-8"></i>
+                        </div>
+                        <h4 class="text-sm font-semibold text-slate-300">화면 연결 중...</h4>
+                      </div>
+                    </div>
+                  `}
 
               <!-- Remote cursor marker -->
-              <div id="cursor-indicator" class="${this.cursorVisible ? '' : 'hidden'} absolute bg-google-blue border border-blue-400 px-2 py-1 rounded-md text-xs text-white flex items-center gap-1.5 shadow-lg select-none pointer-events-none z-20" style="top: ${this.cursorY}%; left: ${this.cursorX}%;">
-                <i data-lucide="pointer" class="w-3.5 h-3.5 text-white"></i> 제어자 커서 (조종 중)
+              <div
+                id="cursor-indicator"
+                class="${this.cursorVisible
+                  ? ""
+                  : "hidden"} bg-google-blue pointer-events-none absolute z-20 flex items-center gap-1.5 rounded-md border border-blue-400 px-2 py-1 text-xs text-white shadow-lg select-none"
+                style="top: ${this.cursorY}%; left: ${this.cursorX}%;"
+              >
+                <i data-lucide="pointer" class="h-3.5 w-3.5 text-white"></i> 제어자 커서 (조종 중)
               </div>
 
-              <!-- Annotation overlays -->
-              <div id="annotation-mock" class="${this.annotationVisible ? '' : 'hidden'} absolute inset-0 bg-transparent pointer-events-none z-20">
-                <svg class="w-full h-full text-amber-500" viewBox="0 0 800 450" fill="none">
-                  <path d="M 550 140 C 530 80, 650 60, 600 150" stroke="#F59E0B" stroke-width="4" stroke-linecap="round" fill="none"/>
-                  <text x="500" y="220" fill="#D97706" class="dark:fill-[#F59E0B]" font-size="14" font-weight="bold">이 구 영역 레이아웃 확인 필요!</text>
-                </svg>
+              <!-- Latency Badge overlay -->
+              <div
+                class="absolute top-4 left-4 z-20 flex items-center gap-1.5 rounded-lg border border-slate-700/50 bg-slate-900/80 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-400 shadow-sm backdrop-blur"
+              >
+                <span class="relative flex h-1.5 w-1.5">
+                  <span
+                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
+                  ></span>
+                  <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                </span>
+                <span>지연율: 1.2ms</span>
               </div>
 
               <!-- VoIP audio active waves -->
-              <div id="voice-wave-container" class="${!this.localMuted ? '' : 'hidden'} absolute top-4 left-4 bg-slate-950/80 border border-blue-500/30 px-3 py-2 rounded-lg flex items-center gap-3 z-20">
-                <div class="flex items-end gap-1 h-6">
-                  <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.1s"></div>
-                  <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.4s"></div>
-                  <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.2s"></div>
-                  <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.6s"></div>
-                  <div class="audio-wave-bar w-1 bg-google-blue" style="animation-delay: 0.3s"></div>
+              <div
+                id="voice-wave-container"
+                class="${!this.localMuted
+                  ? ""
+                  : "hidden"} absolute top-3 right-3 z-20 flex items-center gap-3 rounded-lg border border-blue-500/30 bg-slate-950/80 px-3 py-2"
+              >
+                <div class="flex h-6 items-end gap-1">
+                  <div class="audio-wave-bar bg-google-blue w-1" style="animation-delay: 0.1s"></div>
+                  <div class="audio-wave-bar bg-google-blue w-1" style="animation-delay: 0.4s"></div>
+                  <div class="audio-wave-bar bg-google-blue w-1" style="animation-delay: 0.2s"></div>
+                  <div class="audio-wave-bar bg-google-blue w-1" style="animation-delay: 0.6s"></div>
+                  <div class="audio-wave-bar bg-google-blue w-1" style="animation-delay: 0.3s"></div>
                 </div>
-                <span class="text-xs text-google-blue font-bold tracking-tight">LAN 보이스 음성 연결됨</span>
               </div>
-            </div>
 
+              <!-- Floating control overlay bar -->
+              <div
+                class="pointer-events-none absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 translate-y-20 items-center gap-2 rounded-2xl border border-slate-700/50 bg-slate-900/85 p-2 opacity-0 shadow-lg backdrop-blur transition-all duration-300 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
+              >
+                <!-- Mute / Unmute -->
+                <button
+                  id="btn-audio-toggle"
+                  @click=${this.onToggleMute}
+                  class="${this.localMuted
+                    ? "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
+                    : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"} flex h-10 w-10 items-center justify-center rounded-xl border border-transparent transition-colors"
+                  title="${this.localMuted ? "마이크 켜기" : "마이크 끄기"}"
+                >
+                  ${this.localMuted
+                    ? html`<i data-lucide="mic-off" class="h-5 w-5"></i>`
+                    : html`<i data-lucide="mic" class="h-5 w-5"></i>`}
+                </button>
 
-            <!-- Mute, click, draw buttons -->
-            <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80">
-              <span class="text-xs text-slate-500">지연율: <strong class="text-emerald-600 font-mono">1.2ms (LAN 다이렉트)</strong></span>
-              <div class="flex items-center gap-2">
-                <button id="btn-audio-toggle" @click=${this.onToggleMute} class="text-xs ${this.localMuted ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'} border hover:bg-opacity-20 px-3 py-2 rounded-lg font-bold transition flex items-center gap-1.5">
-                  <i data-lucide="mic" class="w-3.5 h-3.5"></i> ${this.localMuted ? '마이크 음소거 해제' : '마이크 끄기'}
-                </button>
-                <button @click=${this.onSimulateClick} id="btn-action-control" class="${isChulsoo ? '' : 'hidden'} text-xs bg-google-blue/10 border border-google-blue/20 text-google-blue hover:bg-google-blue hover:text-white px-3 py-2 rounded-lg font-bold transition">
-                  <i data-lucide="mouse-pointer-click" class="inline w-3.5 h-3.5 mr-1"></i> 가상 원격 클릭
-                </button>
-                <button @click=${this.onToggleDraw} id="btn-action-draw" class="${isChulsoo ? '' : 'hidden'} text-xs bg-amber-500/10 border border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-white px-3 py-2 rounded-lg font-bold transition">
-                  <i data-lucide="pencil" class="inline w-3.5 h-3.5 mr-1"></i> 펜 피드백 토글
+                <!-- Virtual Remote Click -->
+                ${isChulsoo
+                  ? html`
+                      <button
+                        @click=${this.onSimulateClick}
+                        class="text-google-blue flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-800/80 transition-colors hover:bg-slate-700"
+                        title="가상 원격 클릭"
+                      >
+                        <i data-lucide="mouse-pointer-click" class="h-5 w-5"></i>
+                      </button>
+                    `
+                  : ""}
+
+                <!-- Pen Feedback Toggle -->
+                ${isChulsoo
+                  ? html`
+                      <button
+                        @click=${this.onToggleDraw}
+                        class="${this.annotationVisible
+                          ? "border-amber-500/30 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+                          : "border-slate-700/50 bg-slate-800/80 text-amber-500 hover:bg-slate-700"} flex h-10 w-10 items-center justify-center rounded-xl border transition-colors"
+                        title="펜 피드백 토글"
+                      >
+                        <i data-lucide="pencil" class="h-5 w-5"></i>
+                      </button>
+                    `
+                  : ""}
+
+                <!-- Divider line -->
+                <div class="mx-0.5 h-5 w-px bg-slate-700/50"></div>
+
+                <!-- Fullscreen Toggle -->
+                <button
+                  @click=${this.toggleFullScreen}
+                  class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-800/80 text-slate-300 transition-colors hover:bg-slate-700"
+                  title="${this.isFullScreen ? "화면 축소" : "전체화면"}"
+                >
+                  ${this.isFullScreen
+                    ? html`<i data-lucide="minimize" class="h-5 w-5"></i>`
+                    : html`<i data-lucide="maximize" class="h-5 w-5"></i>`}
                 </button>
               </div>
             </div>
           </div>
 
           <!-- Render chat sidebar directly to support Light DOM layout -->
-          <ll-chat 
-            .chatMessages=${this.chatMessages} 
-            .viewerCount=${this.viewerCount} 
+          <ll-chat
+            .chatMessages=${this.chatMessages}
+            .viewerCount=${this.viewerCount}
             .participants=${this.participants}
+            .myNickname=${this.myNickname}
             @send-message=${this.onForwardSendMessage}
-            class="xl:col-span-4 block w-full"
+            class="block w-full xl:col-span-4"
           ></ll-chat>
         </div>
       </div>
     `;
   }
 
+  private toggleFullScreen() {
+    const wrapper = this.querySelector("#video-wrapper");
+    if (!wrapper) return;
+    if (!document.fullscreenElement) {
+      wrapper.requestFullscreen().catch((err) => {
+        console.error("Error attempting to enable full-screen mode:", err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
   private onToggleMute() {
-    this.dispatchEvent(new CustomEvent('toggle-mute', { bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("toggle-mute", { bubbles: true, composed: true }));
   }
 
   private onSimulateClick() {
-    this.dispatchEvent(new CustomEvent('simulate-click', { bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("simulate-click", { bubbles: true, composed: true }));
   }
 
   private onToggleDraw() {
-    this.dispatchEvent(new CustomEvent('toggle-draw', { bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("toggle-draw", { bubbles: true, composed: true }));
   }
 
   private onLeaveSession() {
-    this.dispatchEvent(new CustomEvent('leave-session', { bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("leave-session", { bubbles: true, composed: true }));
   }
 
   private onForwardSendMessage(e: CustomEvent<{ text: string }>) {
-    this.dispatchEvent(new CustomEvent('send-message', { detail: e.detail, bubbles: true, composed: true }));
+    e.stopPropagation();
+    this.dispatchEvent(new CustomEvent("send-message", { detail: e.detail, bubbles: true, composed: true }));
   }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'll-viewer': LlViewer;
+    "ll-viewer": LlViewer;
   }
 }

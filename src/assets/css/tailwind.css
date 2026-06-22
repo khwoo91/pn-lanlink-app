@@ -1,4 +1,4 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css");
 @import "tailwindcss";
 
 @theme {
@@ -8,7 +8,7 @@
   --color-google-gray: #5f6368;
   --color-google-dark-bg: #202124;
 
-  --font-sans: 'Pretendard', system-ui, sans-serif;
+  --font-sans: "Pretendard", system-ui, sans-serif;
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -16,12 +16,12 @@
 /* 드래그(선택) 영역 스타일 */
 ::selection {
   background-color: #bfdbfe; /* 연한 파란색 배경 (라이트모드) */
-  color: #1b365d;            /* 어두운 파란색 텍스트 */
+  color: #1b365d; /* 어두운 파란색 텍스트 */
 }
 
 .dark ::selection {
   background-color: #1e40af; /* 짙은 파란색 배경 (다크모드) */
-  color: #eff6ff;            /* 밝은 파란색 텍스트 */
+  color: #eff6ff; /* 밝은 파란색 텍스트 */
 }
 
 /* 클릭 요소 전역 포인터 지정 */
@@ -73,5 +73,43 @@ body {
 }
 
 .custom-shadow {
-  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15);
+  box-shadow:
+    0 1px 2px 0 rgba(60, 64, 67, 0.3),
+    0 2px 6px 2px rgba(60, 64, 67, 0.15);
+}
+
+/* 심플 스크롤바 디자인 */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.dark .custom-scrollbar {
+  scrollbar-color: #475569 transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* slate-300 */
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* slate-400 */
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569; /* slate-600 */
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #334155; /* slate-700 */
 }

@@ -14,7 +14,7 @@ export async function captureMicrophone(): Promise<MediaStream | null> {
 
 export function setStreamAudioEnabled(stream: MediaStream | null, enabled: boolean): void {
   if (stream) {
-    stream.getAudioTracks().forEach(track => {
+    stream.getAudioTracks().forEach((track) => {
       track.enabled = enabled;
     });
   }

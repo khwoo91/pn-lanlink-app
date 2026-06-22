@@ -1,34 +1,34 @@
-import { LitElement, html } from 'lit';
-import { customElement, state, query } from 'lit/decorators.js';
-import { createIcons } from 'lucide';
-import { globalIcons } from './utils/icons';
+import { LitElement, html } from "lit";
+import { customElement, state, query } from "lit/decorators.js";
+import { createIcons } from "lucide";
+import { globalIcons } from "./utils/icons";
 
 // Import components to register them as custom elements
-import './components/common/ll-header';
-import './components/common/ll-badge';
-import './components/dashboard/ll-hero';
-import './components/dashboard/ll-carousel';
-import './components/dashboard/ll-mdns-list';
-import './components/session/ll-viewer';
-import './components/session/ll-chat';
-import './components/session/ll-voice';
-import './components/modals/modal-password';
-import './components/modals/modal-saver';
+import "./components/common/ll-header";
+import "./components/common/ll-badge";
+import "./components/dashboard/ll-hero";
+import "./components/dashboard/ll-carousel";
+import "./components/dashboard/ll-mdns-list";
+import "./components/session/ll-viewer";
+import "./components/session/ll-chat";
+import "./components/session/ll-voice";
+import "./components/modals/modal-password";
+import "./components/modals/modal-saver";
 
 // Import core utilities and signaling engines
-import { getTheme, setTheme, getNickname, setNickname } from './utils/storage';
-import { hashPassword, verifyPassword } from './utils/crypto';
-import { captureScreen, stopMediaStream } from './infrastructure/webrtc-stream';
-import { captureMicrophone, setStreamAudioEnabled } from './infrastructure/voip-audio';
-import type { LANRoom } from './infrastructure/mdns-signaling';
-import { SIGNALING_URL, ICE_SERVERS } from './config';
+import { getTheme, setTheme, getNickname, setNickname } from "./utils/storage";
+import { hashPassword, verifyPassword } from "./utils/crypto";
+import { captureScreen, stopMediaStream } from "./infrastructure/webrtc-stream";
+import { captureMicrophone, setStreamAudioEnabled } from "./infrastructure/voip-audio";
+import type { LANRoom } from "./infrastructure/mdns-signaling";
+import { SIGNALING_URL, ICE_SERVERS } from "./config";
 
-@customElement('my-element')
+@customElement("my-element")
 export class MyElement extends LitElement {
-  updated() {
+  firstUpdated() {
     createIcons({
       icons: globalIcons,
-      root: this
+      root: this,
     });
   }
   // Use Light DOM for seamless styling via tailwind.css and global plugins
@@ -37,29 +37,35 @@ export class MyElement extends LitElement {
   }
 
   // Coordinator state
-  @state() private currentScreen: 'landing' | 'host' | 'viewer' = 'landing';
+  @state() private currentScreen: "landing" | "host" | "viewer" = "landing";
   @state() private hostSetupOpen: boolean = false;
   @state() private isRoomLocked: boolean = true;
-  @state() private hostPasswordHash: string = hashPassword('1234');
-  @state() private currentNickname: string = '참여자';
-  @state() private currentTheme: string = 'light';
+  @state() private hostPasswordHash: string = hashPassword("1234");
+  @state() private currentNickname: string = "참여자";
+  @state() private currentTheme: string = "light";
   @state() private carouselIndex: number = 0;
   @state() private viewerCount: number = 0;
   @state() private localMuted: boolean = true;
   @state() private annotationVisible: boolean = false;
   @state() private scannedRooms: LANRoom[] = [];
-  @state() private serverDetectedIp: string = '';
-  @state() private pendingRoomJoinCode: string = '';
-  @state() private pendingRoomJoinIp: string = '';
+  @state() private serverDetectedIp: string = "";
+  @state() private pendingRoomJoinCode: string = "";
+  @state() private pendingRoomJoinIp: string = "";
+  @state() private isSignalingConnected: boolean = false;
 
   // Active room details
-  @state() private activeRoomName: string = '';
-  @state() private activeRoomIp: string = '';
-  @state() private activeRoomCode: string = '15';
+  @state() private activeRoomName: string = "";
+  @state() private activeRoomIp: string = "";
+  @state() private activeRoomCode: string = "15";
 
   // Chatting message logs
   @state() private chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [
-    { sender: 'System', content: '📢 보안 안내: 해당 대화 내역은 외부 서버에 저장되지 않고 WebRTC 패킷으로 흐르며, 방 종료 즉시 메모리에서 완벽하게 파기됩니다.', system: true }
+    {
+      sender: "System",
+      content:
+        "📢 보안 안내: 해당 대화 내역은 외부 서버에 저장되지 않고 WebRTC 패킷으로 흐르며, 방 종료 즉시 메모리에서 완벽하게 파기됩니다.",
+      system: true,
+    },
   ];
 
   // Modals & Overlays toggles
@@ -71,7 +77,7 @@ export class MyElement extends LitElement {
   @state() private activeParticipants: string[] = [];
 
   // Toast feedback state
-  @state() private toastMessage: string = '';
+  @state() private toastMessage: string = "";
   @state() private toastVisible: boolean = false;
 
   // Virtual Remote Click cursor simulator
@@ -80,15 +86,16 @@ export class MyElement extends LitElement {
   @state() private cursorY: number = 50;
 
   // Temporary join room context
-  @state() private tempJoinName: string = '';
-  @state() private tempJoinIp: string = '';
-  @state() private tempNicknameInput: string = '';
+  @state() private tempJoinName: string = "";
+  @state() private tempJoinIp: string = "";
+  @state() private tempNicknameInput: string = "";
 
-  @query('#input-guest-nickname') private inputGuestNicknameElement?: HTMLInputElement;
+  @query("#input-guest-nickname") private inputGuestNicknameElement?: HTMLInputElement;
 
   private toastTimeout?: number;
   private carouselInterval?: number;
   private idleTimerInterval?: number;
+  private emptyRoomTimeout?: number;
 
   private screenStream: MediaStream | null = null;
   private micStream: MediaStream | null = null;
@@ -109,22 +116,22 @@ export class MyElement extends LitElement {
     // Load local storage states via storage utility
     this.currentTheme = getTheme();
     this.applyTheme(this.currentTheme);
-    this.currentNickname = getNickname() || '참여자';
+    this.currentNickname = getNickname() || "참여자";
 
     // Start auto carousel cycling every 5 seconds
     this.startCarouselInterval();
 
-    window.addEventListener('beforeunload', this.handleBeforeUnload);
+    window.addEventListener("beforeunload", this.handleBeforeUnload);
 
     this.initWebSocketSignaling();
 
     // URL 파라미터 체크 (?room=15&ip=192.168.0.27)
     const params = new URLSearchParams(window.location.search);
-    const roomParam = params.get('room');
-    const ipParam = params.get('ip');
+    const roomParam = params.get("room");
+    const ipParam = params.get("ip");
     if (roomParam) {
       this.pendingRoomJoinCode = roomParam;
-      this.pendingRoomJoinIp = ipParam || '';
+      this.pendingRoomJoinIp = ipParam || "";
       this.showToast(`🔗 공유방 링크 감지: 방 정보 확인 후 입장을 시도합니다.`);
 
       // 1.5초 내에 공인 IP 대조 방 목록 응답이 지연되거나 실패할 시, 직접 IP 접속 폴백 수행
@@ -132,9 +139,9 @@ export class MyElement extends LitElement {
         if (this.pendingRoomJoinCode) {
           const code = this.pendingRoomJoinCode;
           const ip = this.pendingRoomJoinIp;
-          this.pendingRoomJoinCode = '';
-          this.pendingRoomJoinIp = '';
-          this.showToast(`⚡ 네트워크 지연 발생: 직접 연결 주소(${ip || '로컬'})로 다이렉트 입장을 시도합니다.`);
+          this.pendingRoomJoinCode = "";
+          this.pendingRoomJoinIp = "";
+          this.showToast(`⚡ 네트워크 지연 발생: 직접 연결 주소(${ip || "로컬"})로 다이렉트 입장을 시도합니다.`);
           this.checkPasswordAndJoin(`공유 회의방 (${code})`, ip || window.location.hostname, false);
         }
       }, 1500);
@@ -148,14 +155,14 @@ export class MyElement extends LitElement {
     if (this.toastTimeout) {
       clearTimeout(this.toastTimeout);
     }
-    if (this.currentScreen === 'host') {
-      this.sendSignalingMessage({ type: 'room-unregister', ip: window.location.hostname });
-      this.sendSignalingMessage({ type: 'leave', from: 'host', to: 'all' });
-    } else if (this.currentScreen === 'viewer') {
-      this.sendSignalingMessage({ type: 'leave', from: this.viewerId, to: 'host' });
+    if (this.currentScreen === "host") {
+      this.sendSignalingMessage({ type: "room-unregister", ip: window.location.hostname });
+      this.sendSignalingMessage({ type: "leave", from: "host", to: "all" });
+    } else if (this.currentScreen === "viewer") {
+      this.sendSignalingMessage({ type: "leave", from: this.viewerId, to: "host" });
     }
 
-    this.hostConnections.forEach(pc => pc.close());
+    this.hostConnections.forEach((pc) => pc.close());
     this.hostConnections.clear();
     this.hostDataChannels.clear();
     this.hostViewerNicknames.clear();
@@ -173,8 +180,9 @@ export class MyElement extends LitElement {
       this.websocket.close();
       this.websocket = null;
     }
+    this.isSignalingConnected = false;
 
-    window.removeEventListener('beforeunload', this.handleBeforeUnload);
+    window.removeEventListener("beforeunload", this.handleBeforeUnload);
     super.disconnectedCallback();
   }
 
@@ -183,23 +191,40 @@ export class MyElement extends LitElement {
     this.activeParticipants = list;
     this.viewerCount = this.hostConnections.size;
 
+    // 0명인 방 자동 폐쇄 (10초 유예 기간 제공)
+    if (this.viewerCount === 0) {
+      if (!this.emptyRoomTimeout) {
+        this.emptyRoomTimeout = window.setTimeout(() => {
+          if (this.viewerCount === 0 && this.currentScreen === "host") {
+            this.stopSharing();
+            this.showToast("🛑 참여 인원이 없어 방이 자동으로 폐쇄되었습니다.");
+          }
+        }, 10000);
+      }
+    } else {
+      if (this.emptyRoomTimeout) {
+        clearTimeout(this.emptyRoomTimeout);
+        this.emptyRoomTimeout = undefined;
+      }
+    }
+
     const packet = {
-      type: 'participants-update',
-      list: list
+      type: "participants-update",
+      list: list,
     };
-    this.hostDataChannels.forEach(channel => {
-      if (channel.readyState === 'open') {
+    this.hostDataChannels.forEach((channel) => {
+      if (channel.readyState === "open") {
         channel.send(JSON.stringify(packet));
       }
     });
   }
 
   private handleBeforeUnload = () => {
-    if (this.currentScreen === 'host') {
-      this.sendSignalingMessage({ type: 'room-unregister', ip: window.location.hostname });
-      this.sendSignalingMessage({ type: 'leave', from: 'host', to: 'all' });
-    } else if (this.currentScreen === 'viewer') {
-      this.sendSignalingMessage({ type: 'leave', from: this.viewerId, to: 'host' });
+    if (this.currentScreen === "host") {
+      this.sendSignalingMessage({ type: "room-unregister", ip: window.location.hostname });
+      this.sendSignalingMessage({ type: "leave", from: "host", to: "all" });
+    } else if (this.currentScreen === "viewer") {
+      this.sendSignalingMessage({ type: "leave", from: this.viewerId, to: "host" });
     }
   };
 
@@ -209,21 +234,22 @@ export class MyElement extends LitElement {
     const socket = new WebSocket(signalingUrl);
 
     socket.onopen = () => {
-      console.log('WebSocket signaling connected.');
+      console.log("WebSocket signaling connected.");
       this.websocket = socket;
+      this.isSignalingConnected = true;
 
-      if (this.currentScreen === 'host') {
+      if (this.currentScreen === "host") {
         this.sendSignalingMessage({
-          type: 'room-register',
-          from: 'host',
-          to: 'server',
+          type: "room-register",
+          from: "host",
+          to: "server",
           room: {
             name: `${this.currentNickname} 님의 방`,
             ip: this.serverDetectedIp || window.location.hostname,
             code: this.activeRoomCode,
             locked: this.isRoomLocked,
-            fps: 30
-          }
+            fps: 30,
+          },
         });
       }
     };
@@ -232,72 +258,77 @@ export class MyElement extends LitElement {
       try {
         const msg = JSON.parse(event.data);
 
-        if (msg.type === 'server-info') {
+        if (msg.type === "server-info") {
           this.serverDetectedIp = msg.ip;
-          console.log('Server detected IP:', this.serverDetectedIp);
+          console.log("Server detected IP:", this.serverDetectedIp);
 
-          if (this.currentScreen === 'host') {
+          if (this.currentScreen === "host") {
             this.sendSignalingMessage({
-              type: 'room-register',
-              from: 'host',
-              to: 'server',
+              type: "room-register",
+              from: "host",
+              to: "server",
               room: {
                 name: `${this.currentNickname} 님의 방`,
                 ip: this.serverDetectedIp,
                 code: this.activeRoomCode,
                 locked: this.isRoomLocked,
-                fps: 30
-              }
+                fps: 30,
+              },
             });
           }
           return;
         }
 
-        if (msg.type === 'room-list-response') {
+        if (msg.type === "room-list-response") {
           this.scannedRooms = msg.rooms;
 
           if (this.pendingRoomJoinCode) {
             const code = this.pendingRoomJoinCode;
             const fallbackIp = this.pendingRoomJoinIp;
-            this.pendingRoomJoinCode = ''; // 1회만 자동입장 시도
-            this.pendingRoomJoinIp = '';
+            this.pendingRoomJoinCode = ""; // 1회만 자동입장 시도
+            this.pendingRoomJoinIp = "";
 
-            const foundRoom = this.scannedRooms.find(r => r.code === code || r.ip === code || r.name.includes(code));
+            const foundRoom = this.scannedRooms.find((r) => r.code === code || r.ip === code || r.name.includes(code));
             if (foundRoom) {
               this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked);
             } else {
               // 룸 목록에서 정확히 찾지 못했을 경우 링크에 동봉된 ipParam 주소를 우선 탑재하여 조인
-              const targetIp = fallbackIp || (code === window.location.hostname || code === this.serverDetectedIp ? (this.serverDetectedIp || window.location.hostname) : code);
+              const targetIp =
+                fallbackIp ||
+                (code === window.location.hostname || code === this.serverDetectedIp
+                  ? this.serverDetectedIp || window.location.hostname
+                  : code);
               this.checkPasswordAndJoin(`공유 회의방 (${code})`, targetIp, false);
             }
           }
           return;
         }
 
-        if (msg.to !== 'host' && msg.to !== this.viewerId && msg.to !== 'all') return;
+        if (msg.to !== "host" && msg.to !== this.viewerId && msg.to !== "all") return;
         if (msg.from === this.viewerId) return;
 
-        if (msg.type === 'join-request') {
-          if (this.currentScreen === 'host' && msg.roomCode === this.activeRoomCode) {
+        if (msg.type === "join-request") {
+          if (this.currentScreen === "host" && msg.roomCode === this.activeRoomCode) {
             await this.handleJoinRequest(msg.from, msg.nickname);
           }
-        } else if (msg.type === 'offer') {
+        } else if (msg.type === "offer") {
           await this.handleOffer(msg.from, msg.sdp);
-        } else if (msg.type === 'answer') {
+        } else if (msg.type === "answer") {
           await this.handleAnswer(msg.from, msg.sdp);
-        } else if (msg.type === 'candidate') {
+        } else if (msg.type === "candidate") {
           await this.handleIceCandidate(msg.from, msg.candidate);
-        } else if (msg.type === 'leave') {
+        } else if (msg.type === "leave") {
           this.handlePeerLeave(msg.from);
         }
       } catch (err) {
-        console.error('Error handling WebSocket message in client:', err);
+        console.error("Error handling WebSocket message in client:", err);
       }
     };
 
     socket.onclose = () => {
-      console.log('WebSocket signaling disconnected. Retrying in 3s...');
+      console.log("WebSocket signaling disconnected. Retrying in 3s...");
       this.websocket = null;
+      this.isSignalingConnected = false;
       setTimeout(() => {
         if (this.isConnected) {
           this.initWebSocketSignaling();
@@ -306,7 +337,8 @@ export class MyElement extends LitElement {
     };
 
     socket.onerror = (err) => {
-      console.error('WebSocket error:', err);
+      console.error("WebSocket error:", err);
+      this.isSignalingConnected = false;
     };
   }
 
@@ -318,46 +350,46 @@ export class MyElement extends LitElement {
   }
 
   private async handleJoinRequest(viewerId: string, nickname?: string) {
-    if (this.currentScreen !== 'host') return;
+    if (this.currentScreen !== "host") return;
 
     const pc = new RTCPeerConnection({
-      iceServers: ICE_SERVERS
+      iceServers: ICE_SERVERS,
     });
 
     this.hostConnections.set(viewerId, pc);
-    this.hostViewerNicknames.set(viewerId, nickname || '참여자');
+    this.hostViewerNicknames.set(viewerId, nickname || "참여자");
     this.updateParticipants();
 
     if (this.screenStream) {
-      this.screenStream.getTracks().forEach(track => {
+      this.screenStream.getTracks().forEach((track) => {
         pc.addTrack(track, this.screenStream!);
       });
     }
 
-    pc.addTransceiver('audio', { direction: 'sendrecv' });
+    pc.addTransceiver("audio", { direction: "sendrecv" });
 
-    const dc = pc.createDataChannel('chat');
+    const dc = pc.createDataChannel("chat");
     this.hostDataChannels.set(viewerId, dc);
     this.setupDataChannel(dc, viewerId);
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         this.sendSignalingMessage({
-          type: 'candidate',
-          from: 'host',
+          type: "candidate",
+          from: "host",
           to: viewerId,
-          candidate: event.candidate
+          candidate: event.candidate,
         });
       }
     };
 
     pc.ontrack = (event) => {
       const remoteStream = event.streams[0];
-      if (event.track.kind === 'audio') {
-        const audio = document.createElement('audio');
+      if (event.track.kind === "audio") {
+        const audio = document.createElement("audio");
         audio.srcObject = remoteStream;
         audio.autoplay = true;
-        audio.style.display = 'none';
+        audio.style.display = "none";
         audio.dataset.viewerId = viewerId;
         document.body.appendChild(audio);
       }
@@ -367,13 +399,13 @@ export class MyElement extends LitElement {
     await pc.setLocalDescription(offer);
 
     this.sendSignalingMessage({
-      type: 'offer',
-      from: 'host',
+      type: "offer",
+      from: "host",
       to: viewerId,
-      sdp: offer
+      sdp: offer,
     });
 
-    this.showToast(`👥 [${nickname || '참여자'}] 님이 P2P 연결을 수집하고 있습니다.`);
+    this.showToast(`👥 [${nickname || "참여자"}] 님이 P2P 연결을 수집하고 있습니다.`);
   }
 
   private async handleAnswer(viewerId: string, sdp: any) {
@@ -384,20 +416,20 @@ export class MyElement extends LitElement {
   }
 
   private async handleOffer(_from: string, sdp: any) {
-    if (this.currentScreen !== 'viewer') return;
+    if (this.currentScreen !== "viewer") return;
 
     const pc = new RTCPeerConnection({
-      iceServers: ICE_SERVERS
+      iceServers: ICE_SERVERS,
     });
     this.viewerConnection = pc;
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         this.sendSignalingMessage({
-          type: 'candidate',
+          type: "candidate",
           from: this.viewerId,
-          to: 'host',
-          candidate: event.candidate
+          to: "host",
+          candidate: event.candidate,
         });
       }
     };
@@ -410,15 +442,15 @@ export class MyElement extends LitElement {
 
     pc.ondatachannel = (event) => {
       this.viewerDataChannel = event.channel;
-      this.setupDataChannel(event.channel, 'host');
+      this.setupDataChannel(event.channel, "host");
     };
 
-    pc.addTransceiver('audio', { direction: 'sendrecv' });
+    pc.addTransceiver("audio", { direction: "sendrecv" });
 
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
 
     if (this.micStream) {
-      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+      const sender = pc.getSenders().find((s) => s.track && s.track.kind === "audio");
       if (sender) {
         sender.replaceTrack(this.micStream.getAudioTracks()[0]);
       }
@@ -428,20 +460,20 @@ export class MyElement extends LitElement {
     await pc.setLocalDescription(answer);
 
     this.sendSignalingMessage({
-      type: 'answer',
+      type: "answer",
       from: this.viewerId,
-      to: 'host',
-      sdp: answer
+      to: "host",
+      sdp: answer,
     });
   }
 
   private async handleIceCandidate(from: string, candidate: any) {
-    if (this.currentScreen === 'host') {
+    if (this.currentScreen === "host") {
       const pc = this.hostConnections.get(from);
       if (pc) {
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
       }
-    } else if (this.currentScreen === 'viewer' && from === 'host') {
+    } else if (this.currentScreen === "viewer" && from === "host") {
       if (this.viewerConnection) {
         await this.viewerConnection.addIceCandidate(new RTCIceCandidate(candidate));
       }
@@ -449,7 +481,7 @@ export class MyElement extends LitElement {
   }
 
   private handlePeerLeave(from: string) {
-    if (this.currentScreen === 'host') {
+    if (this.currentScreen === "host") {
       const pc = this.hostConnections.get(from);
       if (pc) {
         pc.close();
@@ -460,14 +492,14 @@ export class MyElement extends LitElement {
         dc.close();
         this.hostDataChannels.delete(from);
       }
-      const nickname = this.hostViewerNicknames.get(from) || '참여자';
+      const nickname = this.hostViewerNicknames.get(from) || "참여자";
       this.hostViewerNicknames.delete(from);
       this.updateParticipants();
-      document.querySelectorAll(`audio[data-viewer-id="${from}"]`).forEach(el => el.remove());
+      document.querySelectorAll(`audio[data-viewer-id="${from}"]`).forEach((el) => el.remove());
       this.showToast(`🚪 [${nickname}] 님이 퇴장하셨습니다.`);
-    } else if (this.currentScreen === 'viewer' && from === 'host') {
+    } else if (this.currentScreen === "viewer" && from === "host") {
       this.leaveSession();
-      this.showToast('🛑 호스트가 공유를 중단하여 메인으로 대기합니다.');
+      this.showToast("🛑 호스트가 공유를 중단하여 메인으로 대기합니다.");
     }
   }
 
@@ -475,45 +507,40 @@ export class MyElement extends LitElement {
     channel.onmessage = (event) => {
       try {
         const packet = JSON.parse(event.data);
-        if (packet.type === 'participants-update') {
+        if (packet.type === "participants-update") {
           this.activeParticipants = packet.list;
           this.viewerCount = packet.list.length - 1;
           return;
         }
         if (packet.sender && packet.content) {
-          this.chatMessages = [
-            ...this.chatMessages,
-            { sender: packet.sender, content: packet.content }
-          ];
+          this.chatMessages = [...this.chatMessages, { sender: packet.sender, content: packet.content }];
           setTimeout(() => {
-            const chatBox = document.getElementById('chat-messages-box');
+            const chatBox = document.getElementById("chat-messages-box");
             if (chatBox) {
               chatBox.scrollTop = chatBox.scrollHeight;
             }
           }, 50);
         }
       } catch (e) {
-        console.error('Failed to parse chat message:', e);
+        console.error("Failed to parse chat message:", e);
       }
     };
   }
 
-
-
   // --- Theme Manager ---
   private applyTheme(theme: string) {
     const htmlElement = document.documentElement;
-    htmlElement.classList.remove('dark');
-    if (theme === 'dark') {
-      htmlElement.classList.add('dark');
-    } else if (theme === 'light') {
-      htmlElement.classList.remove('dark');
-    } else if (theme === 'system') {
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    htmlElement.classList.remove("dark");
+    if (theme === "dark") {
+      htmlElement.classList.add("dark");
+    } else if (theme === "light") {
+      htmlElement.classList.remove("dark");
+    } else if (theme === "system") {
+      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       if (systemPrefersDark) {
-        htmlElement.classList.add('dark');
+        htmlElement.classList.add("dark");
       } else {
-        htmlElement.classList.remove('dark');
+        htmlElement.classList.remove("dark");
       }
     }
   }
@@ -522,7 +549,9 @@ export class MyElement extends LitElement {
     this.currentTheme = mode;
     setTheme(mode);
     this.applyTheme(mode);
-    this.showToast(`☀️ 테마 설정이 [${mode === 'light' ? '밝은 테마' : mode === 'dark' ? '어두운 테마' : '시스템 연동'}]로 설정되었습니다.`);
+    this.showToast(
+      `☀️ 테마 설정이 [${mode === "light" ? "밝은 테마" : mode === "dark" ? "어두운 테마" : "시스템 연동"}]로 설정되었습니다.`
+    );
   }
 
   private onThemeChange(e: CustomEvent<{ theme: string }>) {
@@ -568,9 +597,9 @@ export class MyElement extends LitElement {
   private onToggleLock(e: CustomEvent<{ checked: boolean }>) {
     this.isRoomLocked = e.detail.checked;
     if (this.isRoomLocked) {
-      this.showToast('🔒 세션 잠금이 활성화되었습니다. 비밀번호를 설정하세요.');
+      this.showToast("🔒 세션 잠금이 활성화되었습니다. 비밀번호를 설정하세요.");
     } else {
-      this.showToast('🔓 세션 잠금이 비활성화되었습니다. 누구나 링크로 자유 접속 가능합니다.');
+      this.showToast("🔓 세션 잠금이 비활성화되었습니다. 누구나 링크로 자유 접속 가능합니다.");
     }
   }
 
@@ -583,61 +612,72 @@ export class MyElement extends LitElement {
   private getShareUrl(): string {
     if (this.serverDetectedIp) {
       // 로컬 개발 서버 포트가 있으면 사용하고, 없으면 기본 5173 포트 부여
-      const port = window.location.port ? `:${window.location.port}` : ':5173';
+      const port = window.location.port ? `:${window.location.port}` : ":5173";
       return `http://${this.serverDetectedIp}${port}/pn-lanlink-app/?room=${this.activeRoomCode}&ip=${this.serverDetectedIp}`;
     }
-    const port = window.location.port ? `:${window.location.port}` : '';
+    const port = window.location.port ? `:${window.location.port}` : "";
     const protocol = window.location.protocol;
     const path = window.location.pathname; // 예: /pn-lanlink-app/
     return `${protocol}//${window.location.hostname}${port}${path}?room=${this.activeRoomCode}&ip=${window.location.hostname}`;
   }
 
   private async onStartSharing(e: CustomEvent<{ password: string }>) {
-    this.hostPasswordHash = hashPassword(e.detail.password || '1234');
+    this.hostPasswordHash = hashPassword(e.detail.password || "1234");
 
     // Generate dynamic room code
     this.activeRoomCode = this.generateRoomCode();
+
+    // 로컬 스토리지에 내가 개설한 방 코드 저장 (새로고침 시 방장 권한 복구용)
+    localStorage.setItem("my_created_room_code", this.activeRoomCode);
 
     // Simulate real screen capture stream
     this.screenStream = await captureScreen();
 
     this.hostSetupOpen = false;
-    this.currentScreen = 'host';
+    this.currentScreen = "host";
     this.viewerCount = 0;
-    this.showToast('🚀 회의 화면 공유 스트리밍이 정상 개설되었습니다!');
+    this.showToast("🚀 회의 화면 공유 스트리밍이 정상 개설되었습니다!");
 
     // Register room via WebSocket signaling
     this.sendSignalingMessage({
-      type: 'room-register',
-      from: 'host',
-      to: 'server',
+      type: "room-register",
+      from: "host",
+      to: "server",
       room: {
         name: `${this.currentNickname} 님의 방`,
         ip: this.serverDetectedIp || window.location.hostname,
         code: this.activeRoomCode,
         locked: this.isRoomLocked,
-        fps: 30
-      }
+        fps: 30,
+      },
     });
 
     this.activeParticipants = [this.currentNickname];
   }
 
   private stopSharing() {
-    this.currentScreen = 'landing';
+    this.currentScreen = "landing";
     this.viewerCount = 0;
     this.activeParticipants = [];
     this.stopIdleTimer();
     this.idleSafeguardOpen = false;
+
+    // 로컬 스토리지 방 코드 정리 및 0명 폭파 타이머 정리
+    localStorage.removeItem("my_created_room_code");
+    if (this.emptyRoomTimeout) {
+      clearTimeout(this.emptyRoomTimeout);
+      this.emptyRoomTimeout = undefined;
+    }
+
     this.cleanupMediaStreams();
-    this.showToast('⏹️ 화면 공유 방송을 종료하고 메인으로 대기합니다.');
+    this.showToast("⏹️ 화면 공유 방송을 종료하고 메인으로 대기합니다.");
 
     // Unregister room via WebSocket signaling
     this.sendSignalingMessage({
-      type: 'room-unregister',
-      from: 'host',
-      to: 'server',
-      ip: window.location.hostname
+      type: "room-unregister",
+      from: "host",
+      to: "server",
+      ip: window.location.hostname,
     });
   }
 
@@ -645,15 +685,15 @@ export class MyElement extends LitElement {
   private onJoinRoom(e: CustomEvent<{ code: string }>) {
     const inputVal = e.detail.code.trim();
     if (!inputVal) {
-      this.showToast('⚠️ 입장 코드 또는 링크를 입력해주세요.');
+      this.showToast("⚠️ 입장 코드 또는 링크를 입력해주세요.");
       return;
     }
 
     let code = inputVal;
-    if (inputVal.includes('?room=')) {
+    if (inputVal.includes("?room=")) {
       try {
         const urlObj = new URL(inputVal);
-        code = urlObj.searchParams.get('room') || inputVal;
+        code = urlObj.searchParams.get("room") || inputVal;
       } catch (e) {
         const match = inputVal.match(/[?&]room=([^&]+)/);
         if (match) code = match[1];
@@ -661,7 +701,7 @@ export class MyElement extends LitElement {
     }
 
     const rooms = this.scannedRooms;
-    const foundRoom = rooms.find(r => r.ip === code || r.code === code || r.name.includes(code));
+    const foundRoom = rooms.find((r) => r.ip === code || r.code === code || r.name.includes(code));
 
     if (foundRoom) {
       this.pendingRoomJoinCode = foundRoom.code;
@@ -670,7 +710,7 @@ export class MyElement extends LitElement {
       // 대기방 목록에 없더라도 입력된 숫자를 룸 번호로 간주하여 강제 다이렉트 조인 시도
       this.pendingRoomJoinCode = code;
       const params = new URLSearchParams(window.location.search);
-      const ipParam = params.get('ip') || window.location.hostname;
+      const ipParam = params.get("ip") || window.location.hostname;
       this.checkPasswordAndJoin(`공유 회의방 (${code})`, ipParam, false);
     }
   }
@@ -699,12 +739,43 @@ export class MyElement extends LitElement {
       this.joinRoomDirectly();
       this.showToast(`🔑 인증에 성공했습니다. [${this.tempJoinName}] 님의 화면을 수신합니다.`);
     } else {
-      this.showToast('❌ 비밀번호가 올바르지 않습니다. (기본: 1234)');
+      this.showToast("❌ 비밀번호가 올바르지 않습니다. (기본: 1234)");
     }
   }
 
-  private joinRoomDirectly() {
-    this.currentScreen = 'viewer';
+  private async joinRoomDirectly() {
+    // 내가 개설한 방인지 체크하여 방장 화면 복원
+    const myCreatedRoomCode = localStorage.getItem("my_created_room_code");
+    const targetRoomCode = this.pendingRoomJoinCode || this.activeRoomCode;
+
+    if (myCreatedRoomCode && targetRoomCode === myCreatedRoomCode) {
+      this.activeRoomCode = myCreatedRoomCode;
+      this.hostSetupOpen = false;
+      this.currentScreen = "host";
+      this.viewerCount = 0;
+      this.activeParticipants = [this.currentNickname];
+
+      // 화면 공유 스트림 다시 캡처
+      this.screenStream = await captureScreen();
+
+      // 시그널링 서버에 재등록
+      this.sendSignalingMessage({
+        type: "room-register",
+        from: "host",
+        to: "server",
+        room: {
+          name: `${this.currentNickname} 님의 방`,
+          ip: this.serverDetectedIp || window.location.hostname,
+          code: this.activeRoomCode,
+          locked: this.isRoomLocked,
+          fps: 30,
+        },
+      });
+      this.showToast("🚀 내 방장 세션이 성공적으로 복원되었습니다!");
+      return;
+    }
+
+    this.currentScreen = "viewer";
     this.activeRoomName = this.tempJoinName;
     this.activeRoomIp = this.tempJoinIp;
     this.viewerCount = 0;
@@ -712,17 +783,22 @@ export class MyElement extends LitElement {
 
     // Reset Chat Messages
     this.chatMessages = [
-      { sender: 'System', content: '📢 보안 안내: 해당 대화 내역은 외부 서버에 저장되지 않고 WebRTC 패킷으로 흐르며, 방 종료 즉시 메모리에서 완벽하게 파기됩니다.', system: true }
+      {
+        sender: "System",
+        content:
+          "📢 보안 안내: 해당 대화 내역은 외부 서버에 저장되지 않고 WebRTC 패킷으로 흐르며, 방 종료 즉시 메모리에서 완벽하게 파기됩니다.",
+        system: true,
+      },
     ];
 
     // Send Join Request to Host via signaling (방 코드를 패킷에 실어서 송신)
     setTimeout(() => {
       this.sendSignalingMessage({
-        type: 'join-request',
+        type: "join-request",
         from: this.viewerId,
-        to: 'host',
+        to: "host",
         roomCode: this.pendingRoomJoinCode || this.activeRoomCode,
-        nickname: this.currentNickname
+        nickname: this.currentNickname,
       });
     }, 500);
 
@@ -730,15 +806,15 @@ export class MyElement extends LitElement {
   }
 
   private leaveSession() {
-    this.currentScreen = 'landing';
+    this.currentScreen = "landing";
     this.viewerCount = 0;
     this.activeParticipants = [];
 
     // Send leave signal
     this.sendSignalingMessage({
-      type: 'leave',
+      type: "leave",
       from: this.viewerId,
-      to: 'host'
+      to: "host",
     });
 
     if (this.viewerConnection) {
@@ -752,17 +828,17 @@ export class MyElement extends LitElement {
     this.activeStream = null;
 
     this.cleanupMediaStreams();
-    this.showToast('🚪 세션 연결이 중단되었습니다.');
+    this.showToast("🚪 세션 연결이 중단되었습니다.");
   }
 
   // --- Mic Mute Toggle ---
   private async toggleLocalMute() {
     this.localMuted = !this.localMuted;
 
-    if (this.currentScreen === 'viewer') {
-      const audioTransceiver = this.viewerConnection?.getTransceivers().find(
-        t => t.receiver.track && t.receiver.track.kind === 'audio'
-      );
+    if (this.currentScreen === "viewer") {
+      const audioTransceiver = this.viewerConnection
+        ?.getTransceivers()
+        .find((t) => t.receiver.track && t.receiver.track.kind === "audio");
       const sender = audioTransceiver?.sender;
 
       if (!this.localMuted) {
@@ -782,13 +858,17 @@ export class MyElement extends LitElement {
     }
 
     setStreamAudioEnabled(this.micStream, !this.localMuted);
-    this.showToast(this.localMuted ? '🔇 내 마이크가 음소거되었습니다.' : '🎙️ 마이크가 켜졌습니다. (보이스 VoIP 송신 시작)');
+    this.showToast(
+      this.localMuted ? "🔇 내 마이크가 음소거되었습니다." : "🎙️ 마이크가 켜졌습니다. (보이스 VoIP 송신 시작)"
+    );
   }
 
   // --- Annotation Overlay Toggle ---
   private toggleAnnotationOverlay() {
     this.annotationVisible = !this.annotationVisible;
-    this.showToast(this.annotationVisible ? '✏️ 화면 드로잉 필기 레이어를 오버레이합니다.' : '✏️ 화면 드로잉 필기 레이어를 숨깁니다.');
+    this.showToast(
+      this.annotationVisible ? "✏️ 화면 드로잉 필기 레이어를 오버레이합니다." : "✏️ 화면 드로잉 필기 레이어를 숨깁니다."
+    );
   }
 
   // --- Virtual Pointer Click Simulation ---
@@ -796,7 +876,7 @@ export class MyElement extends LitElement {
     this.cursorVisible = true;
     this.cursorX = Math.floor(Math.random() * 40 + 20); // range 20% to 60%
     this.cursorY = Math.floor(Math.random() * 40 + 20);
-    this.showToast('⚡ 가상 원격 마우스 클릭 신호 전송 (WebRTC DataChannel)');
+    this.showToast("⚡ 가상 원격 마우스 클릭 신호 전송 (WebRTC DataChannel)");
     setTimeout(() => {
       this.cursorVisible = false;
     }, 2000);
@@ -805,30 +885,27 @@ export class MyElement extends LitElement {
   // --- Real-time Local Chat ---
   private onSendMessage(e: CustomEvent<{ text: string }>) {
     const text = e.detail.text;
-    this.chatMessages = [
-      ...this.chatMessages,
-      { sender: this.currentNickname, content: text }
-    ];
+    this.chatMessages = [...this.chatMessages, { sender: this.currentNickname, content: text }];
 
     const packet = { sender: this.currentNickname, content: text, timestamp: Date.now() };
 
     // If host, send to all viewers
-    if (this.currentScreen === 'host') {
-      this.hostDataChannels.forEach(channel => {
-        if (channel.readyState === 'open') {
+    if (this.currentScreen === "host") {
+      this.hostDataChannels.forEach((channel) => {
+        if (channel.readyState === "open") {
           channel.send(JSON.stringify(packet));
         }
       });
     }
     // If viewer, send to host
-    else if (this.currentScreen === 'viewer') {
-      if (this.viewerDataChannel && this.viewerDataChannel.readyState === 'open') {
+    else if (this.currentScreen === "viewer") {
+      if (this.viewerDataChannel && this.viewerDataChannel.readyState === "open") {
         this.viewerDataChannel.send(JSON.stringify(packet));
       }
     }
 
     setTimeout(() => {
-      const chatBox = document.getElementById('chat-messages-box');
+      const chatBox = document.getElementById("chat-messages-box");
       if (chatBox) {
         chatBox.scrollTop = chatBox.scrollHeight;
       }
@@ -839,7 +916,7 @@ export class MyElement extends LitElement {
   private simulateIdleTrigger() {
     this.idleSafeguardOpen = true;
     this.idleCountdown = 60;
-    this.showToast('🚦 대역폭 세이버 연출이 작동되었습니다.');
+    this.showToast("🚦 대역폭 세이버 연출이 작동되었습니다.");
     this.startIdleTimer();
   }
 
@@ -863,14 +940,14 @@ export class MyElement extends LitElement {
   private cancelIdleSafeguard() {
     this.stopIdleTimer();
     this.idleSafeguardOpen = false;
-    this.showToast('✅ 회의 유지가 요청되었습니다. 세션 대기방 타이머 초기화 완료.');
+    this.showToast("✅ 회의 유지가 요청되었습니다. 세션 대기방 타이머 초기화 완료.");
   }
 
   private triggerImmediateStop() {
     this.stopIdleTimer();
     this.idleSafeguardOpen = false;
     this.stopSharing();
-    this.showToast('🛑 미활동 감지로 인해 세션이 자동으로 안전 종료되었습니다.');
+    this.showToast("🛑 미활동 감지로 인해 세션이 자동으로 안전 종료되었습니다.");
   }
 
   // --- Nickname Edit ---
@@ -884,9 +961,9 @@ export class MyElement extends LitElement {
   }
 
   private submitNickname() {
-    const inputVal = this.inputGuestNicknameElement ? this.inputGuestNicknameElement.value.trim() : '';
+    const inputVal = this.inputGuestNicknameElement ? this.inputGuestNicknameElement.value.trim() : "";
     if (!inputVal) {
-      this.showToast('⚠️ 대화명을 입력해주세요.');
+      this.showToast("⚠️ 대화명을 입력해주세요.");
       return;
     }
     this.currentNickname = inputVal;
@@ -906,7 +983,7 @@ export class MyElement extends LitElement {
 
   private upgradeSuccess() {
     this.proModalOpen = false;
-    this.showToast('👑 LANLink PRO 버전 정식 라이센스가 구독 연동되었습니다. (체험 서비스)');
+    this.showToast("👑 LANLink PRO 버전 정식 라이센스가 구독 연동되었습니다. (체험 서비스)");
   }
 
   // --- Helper to clean up streams ---
@@ -918,20 +995,23 @@ export class MyElement extends LitElement {
   }
 
   private copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text).then(() => {
-      this.showToast('📋 접속 고유 링크가 클립보드에 복사되었습니다!');
-    }).catch(() => {
-      this.showToast('❌ 복사에 실패했습니다.');
-    });
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        this.showToast("📋 접속 고유 링크가 클립보드에 복사되었습니다!");
+      })
+      .catch(() => {
+        this.showToast("❌ 복사에 실패했습니다.");
+      });
   }
 
   private handleLogoClick() {
-    if (this.currentScreen === 'host') {
+    if (this.currentScreen === "host") {
       this.stopSharing();
-    } else if (this.currentScreen === 'viewer') {
+    } else if (this.currentScreen === "viewer") {
       this.leaveSession();
     } else {
-      this.currentScreen = 'landing';
+      this.currentScreen = "landing";
     }
   }
 
@@ -939,184 +1019,282 @@ export class MyElement extends LitElement {
   render() {
     return html`
       <!-- Header Navigation -->
-      <ll-header .currentNickname=${this.currentNickname} .currentTheme=${this.currentTheme}
-        @edit-nickname=${this.openNicknameEdit} @change-theme=${this.onThemeChange} @open-pro=${this.openProModal}
-        @logo-click=${this.handleLogoClick}>
+      <ll-header
+        .currentNickname=${this.currentNickname}
+        .currentTheme=${this.currentTheme}
+        .isSignalingConnected=${this.isSignalingConnected}
+        @edit-nickname=${this.openNicknameEdit}
+        @change-theme=${this.onThemeChange}
+        @open-pro=${this.openProModal}
+        @logo-click=${this.handleLogoClick}
+      >
       </ll-header>
-      
+
       <!-- Main Layout -->
-      <main class="grow max-w-7xl mx-auto px-6 py-12 md:py-20 w-full flex flex-col justify-center">
-      
+      <main class="mx-auto flex w-full max-w-5xl grow flex-col justify-center px-6 py-12 md:py-20">
         <!-- Landing page panel -->
-        ${this.currentScreen === 'landing' ? html`
-        <div id="landing-grid-container" class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-      
-          <ll-hero class="lg:col-span-6 block" .hostSetupOpen=${this.hostSetupOpen} .isRoomLocked=${this.isRoomLocked}
-            .hostPassword=${'1234'} @toggle-drawer=${this.toggleHostSetupDrawer} @toggle-lock=${this.onToggleLock}
-            @start-sharing=${this.onStartSharing} @join-room=${this.onJoinRoom}></ll-hero>
-      
-          <ll-carousel class="lg:col-span-6 block" .carouselIndex=${this.carouselIndex}
-            @switch-carousel=${this.onSwitchCarousel}></ll-carousel>
-      
-          <ll-mdns-list class="lg:col-span-6 block" .rooms=${this.scannedRooms} @select-room=${this.onSelectRoom}>
-          </ll-mdns-list>
-        </div>
-        ` : ''}
-      
+        ${this.currentScreen === "landing"
+          ? html`
+              <div
+                id="landing-container"
+                class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center space-y-10"
+              >
+                <!-- Column: 내가 개설한 방 (Hero) -->
+                <ll-hero
+                  .hostSetupOpen=${this.hostSetupOpen}
+                  .isRoomLocked=${this.isRoomLocked}
+                  .hostPassword=${"1234"}
+                  @toggle-drawer=${this.toggleHostSetupDrawer}
+                  @toggle-lock=${this.onToggleLock}
+                  @start-sharing=${this.onStartSharing}
+                  @join-room=${this.onJoinRoom}
+                  class="w-full"
+                ></ll-hero>
+
+                <!-- Column: 대기방 감지 -->
+                <ll-mdns-list
+                  .rooms=${this.scannedRooms}
+                  @select-room=${this.onSelectRoom}
+                  class="w-full"
+                ></ll-mdns-list>
+
+                <!-- Column: 하단 메인 슬라이드 캐러셀 -->
+                <ll-carousel
+                  .carouselIndex=${this.carouselIndex}
+                  @switch-carousel=${this.onSwitchCarousel}
+                  class="w-full"
+                ></ll-carousel>
+              </div>
+            `
+          : ""}
+
         <!-- Active Host Sharing Workspace -->
-        ${this.currentScreen === 'host' ? html`
-        <div id="sharing-active-workspace" class="max-w-7xl mx-auto w-full grid grid-cols-1 xl:grid-cols-12 gap-8">
-          <div class="xl:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 space-y-8 custom-shadow animate-in zoom-in-95 duration-300">
-            <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
-              <div class="flex items-center gap-3">
-                <span class="relative flex h-3 w-3">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                </span>
-                <div>
-                  <h4 class="text-lg font-bold text-slate-900 dark:text-white">회의 스트리밍 방송 가동 중</h4>
-                  <p class="text-xs text-slate-500">사내망 다이렉트 WebRTC 스트리밍이 가동되고 있습니다.</p>
-                </div>
-              </div>
+        ${this.currentScreen === "host"
+          ? html`
               <div
-                class="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs">
-                <i data-lucide="users" class="w-4 h-4 text-google-blue"></i>
-                <span class="text-slate-600 dark:text-slate-300 font-semibold">참여자: <span id="viewer-count"
-                    class="text-google-blue">${this.viewerCount}</span>명</span>
-              </div>
-            </div>
-        
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-              <div
-                class="md:col-span-4 bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center shadow-inner">
-                <div class="bg-white p-2 rounded-xl mb-3 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
-                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(this.getShareUrl())}" class="w-24 h-24 rounded-lg" alt="Share QR Code" />
-                </div>
-                <span class="text-xs text-slate-400">모바일 / 태블릿 간편 QR</span>
-                <div class="mt-1 text-md font-bold text-google-blue tracking-wider">${this.activeRoomCode}</div>
-              </div>
-        
-              <div class="md:col-span-8 flex flex-col justify-between space-y-4">
-                <div class="space-y-1">
-                  <span class="text-xs text-slate-500 font-bold uppercase tracking-wider">로컬 접속 공유 링크</span>
-                  <div class="flex items-center gap-2">
-                    <div
-                      class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2.5 rounded-xl grow font-mono text-xs text-slate-600 dark:text-slate-300 break-all select-all">
-                      ${this.getShareUrl()}
-                    </div>
-                    <button @click=${() => this.copyToClipboard(this.getShareUrl())} class="p-2.5
-                      bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-google-blue
-                      text-slate-500 rounded-lg transition" title="링크 복사">
-                      <i data-lucide="copy" class="w-4 h-4"></i>
-                    </button>
-                  </div>
-                </div>
-        
-                <div class="bg-google-blue/5 p-4 rounded-xl border border-google-blue/10 text-xs text-slate-500 space-y-1">
-                  <p class="font-bold text-google-blue flex items-center gap-1">
-                    <i data-lucide="lock" class="w-3.5 h-3.5"></i> 종단간 보안 기밀 보호 작동 중
-                  </p>
-                  <p class="text-[11px] leading-relaxed">
-                    설정된 비밀번호가 안전하게 키로 바인딩되었습니다. 사내 메신저나 슬랙에 주소를 전달하세요.
-                  </p>
-                </div>
-        
+                id="sharing-active-workspace"
+                class="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 xl:grid-cols-12"
+              >
                 <div
-                  class="flex flex-col sm:flex-row gap-2 pt-2 justify-between items-center border-t border-slate-200 dark:border-slate-800 text-xs">
-                  <div class="flex items-center gap-1.5 text-slate-400">
-                    <span>테스트 기능:</span>
-                    <button @click=${this.simulateIdleTrigger}
-                      class="text-google-blue dark:text-google-blue hover:underline font-bold">
-                      미접속 30분 초과 연출 ⚡
-                    </button>
+                  class="custom-shadow animate-in zoom-in-95 space-y-8 rounded-3xl border border-slate-200 bg-white p-8 duration-300 xl:col-span-8 dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <div class="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
+                    <div class="flex items-center gap-3">
+                      <span class="relative flex h-3 w-3">
+                        <span
+                          class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"
+                        ></span>
+                        <span class="relative inline-flex h-3 w-3 rounded-full bg-red-500"></span>
+                      </span>
+                      <div>
+                        <h4 class="text-lg font-bold text-slate-900 dark:text-white">회의 스트리밍 방송 가동 중</h4>
+                        <p class="text-xs text-slate-500">사내망 다이렉트 WebRTC 스트리밍이 가동되고 있습니다.</p>
+                      </div>
+                    </div>
+                    <div
+                      class="flex max-w-md items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs dark:border-slate-800 dark:bg-slate-950"
+                    >
+                      <i data-lucide="users" class="text-google-blue h-4 w-4 shrink-0"></i>
+                      <span class="truncate font-semibold text-slate-600 dark:text-slate-300">
+                        참여자:
+                        <span class="text-google-blue font-bold">
+                          ${this.activeParticipants.length > 1 ? this.activeParticipants.slice(1).join(", ") : "없음"}
+                        </span>
+                        (${this.viewerCount}명)
+                      </span>
+                    </div>
                   </div>
-                  <button @click=${this.stopSharing}
-                    class="w-full sm:w-auto bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold py-2.5 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
-                    <i data-lucide="square" class="w-3.5 h-3.5 fill-rose-600"></i> 방송 종료하기
-                  </button>
+
+                  <div class="grid grid-cols-1 items-center gap-8 md:grid-cols-12">
+                    <div
+                      class="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center shadow-inner md:col-span-4 dark:border-slate-800 dark:bg-slate-950"
+                    >
+                      <div
+                        class="mb-3 flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800"
+                      >
+                        <img
+                          src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                            this.getShareUrl()
+                          )}"
+                          class="h-24 w-24 rounded-lg"
+                          alt="Share QR Code"
+                        />
+                      </div>
+                      <span class="text-xs text-slate-400">모바일 / 태블릿 간편 QR</span>
+                      <div class="text-md text-google-blue mt-1 font-bold tracking-wider">${this.activeRoomCode}</div>
+                    </div>
+
+                    <div class="flex flex-col justify-between space-y-4 md:col-span-8">
+                      <div class="space-y-1">
+                        <span class="text-xs font-bold tracking-wider text-slate-500 uppercase"
+                          >로컬 접속 공유 링크</span
+                        >
+                        <div class="flex items-center gap-2">
+                          <div
+                            class="grow rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-mono text-xs break-all text-slate-600 select-all dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                          >
+                            ${this.getShareUrl()}
+                          </div>
+                          <button
+                            @click=${() => this.copyToClipboard(this.getShareUrl())}
+                            class="hover:border-google-blue rounded-lg border border-slate-200 bg-slate-100 p-2.5 text-slate-500 transition dark:border-slate-700 dark:bg-slate-800"
+                            title="링크 복사"
+                          >
+                            <i data-lucide="copy" class="h-4 w-4"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div
+                        class="bg-google-blue/5 border-google-blue/10 space-y-1 rounded-xl border p-4 text-xs text-slate-500"
+                      >
+                        <p class="text-google-blue flex items-center gap-1 font-bold">
+                          <i data-lucide="lock" class="h-3.5 w-3.5"></i> 종단간 보안 기밀 보호 작동 중
+                        </p>
+                        <p class="text-[11px] leading-relaxed">
+                          설정된 비밀번호가 안전하게 키로 바인딩되었습니다. 사내 메신저나 슬랙에 주소를 전달하세요.
+                        </p>
+                      </div>
+
+                      <div
+                        class="flex flex-col items-center justify-between gap-2 border-t border-slate-200 pt-2 text-xs sm:flex-row dark:border-slate-800"
+                      >
+                        <div class="flex items-center gap-1.5 text-slate-400">
+                          <span>테스트 기능:</span>
+                          <button
+                            @click=${this.simulateIdleTrigger}
+                            class="text-google-blue dark:text-google-blue font-bold hover:underline"
+                          >
+                            미접속 30분 초과 연출 ⚡
+                          </button>
+                        </div>
+                        <button
+                          @click=${this.stopSharing}
+                          class="flex w-full items-center justify-center gap-2 rounded-lg bg-rose-50 px-6 py-2.5 font-bold text-rose-600 transition-colors hover:bg-rose-100 sm:w-auto"
+                        >
+                          <i data-lucide="square" class="h-3.5 w-3.5 fill-rose-600"></i> 방송 종료하기
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+                <ll-chat
+                  .chatMessages=${this.chatMessages}
+                  .viewerCount=${this.viewerCount}
+                  .participants=${this.activeParticipants}
+                  .myNickname=${this.currentNickname}
+                  @send-message=${this.onSendMessage}
+                  class="block w-full xl:col-span-4"
+                ></ll-chat>
               </div>
-            </div>
-          </div>
-          <ll-chat
-            .chatMessages=${this.chatMessages}
-            .viewerCount=${this.viewerCount}
-            .participants=${this.activeParticipants}
-            @send-message=${this.onSendMessage}
-            class="xl:col-span-4 block w-full"
-          ></ll-chat>
-        </div>
-        ` : ''}
-      
+            `
+          : ""}
+
         <!-- Active Guest Viewer Workspace -->
-        ${this.currentScreen === 'viewer' ? html`
-        <ll-viewer .activeRoomName=${this.activeRoomName} .activeRoomIp=${this.activeRoomIp} .localMuted=${this.localMuted}
-          .annotationVisible=${this.annotationVisible} .cursorVisible=${this.cursorVisible} .cursorX=${this.cursorX}
-          .cursorY=${this.cursorY} .chatMessages=${this.chatMessages} .viewerCount=${this.viewerCount}
-          .participants=${this.activeParticipants} .stream=${this.activeStream}
-          @toggle-mute=${this.toggleLocalMute} @simulate-click=${this.simulateClick}
-          @toggle-draw=${this.toggleAnnotationOverlay} @leave-session=${this.leaveSession}
-          @send-message=${this.onSendMessage}>
-          <ll-voice .localMuted=${this.localMuted}></ll-voice>
-        </ll-viewer>
-        ` : ''}
-      
+        ${this.currentScreen === "viewer"
+          ? html`
+              <ll-viewer
+                .activeRoomName=${this.activeRoomName}
+                .activeRoomIp=${this.activeRoomIp}
+                .localMuted=${this.localMuted}
+                .annotationVisible=${this.annotationVisible}
+                .cursorVisible=${this.cursorVisible}
+                .cursorX=${this.cursorX}
+                .cursorY=${this.cursorY}
+                .chatMessages=${this.chatMessages}
+                .viewerCount=${this.viewerCount}
+                .participants=${this.activeParticipants}
+                .stream=${this.activeStream}
+                .myNickname=${this.currentNickname}
+                @toggle-mute=${this.toggleLocalMute}
+                @simulate-click=${this.simulateClick}
+                @toggle-draw=${this.toggleAnnotationOverlay}
+                @leave-session=${this.leaveSession}
+                @send-message=${this.onSendMessage}
+              >
+                <ll-voice .localMuted=${this.localMuted}></ll-voice>
+              </ll-viewer>
+            `
+          : ""}
       </main>
-      
-      <footer class="border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 mt-12 py-6 transition-colors">
+
+      <footer
+        class="mt-12 border-t border-slate-200 bg-white py-6 transition-colors dark:border-slate-900 dark:bg-slate-950"
+      >
         <div
-          class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
+          class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 text-xs text-slate-400 md:flex-row dark:text-slate-500"
+        >
           <div>© 2026 LANLink Inc. 사내 로컬 연결 제어 인프라스트럭처</div>
           <div class="flex gap-4">
-            <a href="#" class="hover:text-slate-600 transition">서비스 가이드</a>
-            <a href="#" class="hover:text-slate-600 transition">보안 감사 및 Compliance</a>
-            <a href="#" class="hover:text-slate-600 transition">사내망 구축 문의</a>
+            <a href="#" class="transition hover:text-slate-600">서비스 가이드</a>
+            <a href="#" class="transition hover:text-slate-600">보안 감사 및 Compliance</a>
+            <a href="#" class="transition hover:text-slate-600">사내망 구축 문의</a>
           </div>
         </div>
       </footer>
-      
+
       <!-- Modals and Overlays -->
       ${this.renderNicknameModal()}
-      
-      <modal-password .open=${this.passwordVerifyModalOpen} @close-modal=${() => this.passwordVerifyModalOpen = false}
+
+      <modal-password
+        .open=${this.passwordVerifyModalOpen}
+        @close-modal=${() => (this.passwordVerifyModalOpen = false)}
         @submit-verify-password=${this.onSubmitVerifyPassword}
-        ></modal-password>
-      
-      <modal-saver .open=${this.idleSafeguardOpen} .countdown=${this.idleCountdown} @keep-session=${this.cancelIdleSafeguard}
-        @stop-session=${this.triggerImmediateStop}></modal-saver>
-      
-      ${this.renderProModal()}
-      ${this.renderToast()}
+      ></modal-password>
+
+      <modal-saver
+        .open=${this.idleSafeguardOpen}
+        .countdown=${this.idleCountdown}
+        @keep-session=${this.cancelIdleSafeguard}
+        @stop-session=${this.triggerImmediateStop}
+      ></modal-saver>
+
+      ${this.renderProModal()} ${this.renderToast()}
     `;
   }
 
   private renderNicknameModal() {
     return html`
-      <div id="nickname-modal"
-        class="${this.nicknameModalOpen ? '' : 'hidden'} fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div
+        id="nickname-modal"
+        class="${this.nicknameModalOpen
+          ? ""
+          : "hidden"} fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+      >
         <div
-          class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
+          class="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+        >
           <div
-            class="w-12 h-12 bg-google-blue/10 border border-google-blue/20 text-google-blue rounded-full flex items-center justify-center mx-auto mb-3">
-            <i data-lucide="user-plus" class="w-6 h-6"></i>
+            class="bg-google-blue/10 border-google-blue/20 text-google-blue mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border"
+          >
+            <i data-lucide="user-plus" class="h-6 w-6"></i>
           </div>
-          <h3 class="text-md font-bold text-center text-slate-800 dark:text-white">사내 대화명 설정</h3>
-          <p class="text-xs text-center text-slate-500 mt-1 leading-relaxed">
-            LANLink는 회원가입 정보 대신 일회성 닉네임을 사용합니다.<br>대화명을 입력해 주세요.
+          <h3 class="text-md text-center font-bold text-slate-800 dark:text-white">사내 대화명 설정</h3>
+          <p class="mt-1 text-center text-xs leading-relaxed text-slate-500">
+            LANLink는 회원가입 정보 대신 일회성 닉네임을 사용합니다.<br />대화명을 입력해 주세요.
           </p>
-      
+
           <div class="my-4">
-            <input type="text" id="input-guest-nickname" .value=${this.tempNicknameInput} placeholder="예: 김 대리 (개발팀)"
-              class="w-full text-center py-2.5 bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl focus:border-google-blue focus:outline-none font-semibold text-sm text-slate-800 dark:text-white">
+            <input
+              type="text"
+              id="input-guest-nickname"
+              .value=${this.tempNicknameInput}
+              placeholder="예: 김 대리 (개발팀)"
+              class="dark:bg-slate-955 focus:border-google-blue w-full rounded-xl border border-slate-200 bg-slate-100 py-2.5 text-center text-sm font-semibold text-slate-800 focus:outline-none dark:border-slate-800 dark:text-white"
+            />
           </div>
-      
+
           <div class="flex gap-2">
-            <button @click=${this.closeNicknameModal}
-              class="grow bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-xl text-xs transition">
+            <button
+              @click=${this.closeNicknameModal}
+              class="grow rounded-xl bg-slate-100 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+            >
               취소
             </button>
-            <button @click=${this.submitNickname}
-              class="grow bg-google-blue hover:bg-google-blueHover text-white font-bold py-2.5 rounded-xl text-xs transition">
+            <button
+              @click=${this.submitNickname}
+              class="bg-google-blue hover:bg-google-blueHover grow rounded-xl py-2.5 text-xs font-bold text-white transition"
+            >
               대화명 저장 및 입장
             </button>
           </div>
@@ -1127,40 +1305,56 @@ export class MyElement extends LitElement {
 
   private renderProModal() {
     return html`
-      <div id="pro-modal"
-        class="${this.proModalOpen ? '' : 'hidden'} fixed inset-0 z-50 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div
+        id="pro-modal"
+        class="${this.proModalOpen
+          ? ""
+          : "hidden"} fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm dark:bg-slate-950/80"
+      >
         <div
-          class="bg-white dark:bg-slate-900 border-2 border-amber-500/30 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl relative">
-          <button @click=${this.closeProModal} class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition">
-            <i data-lucide="x" class="w-5 h-5"></i>
+          class="relative w-full max-w-md rounded-2xl border-2 border-amber-500/30 bg-white p-6 text-center shadow-2xl dark:bg-slate-900"
+        >
+          <button
+            @click=${this.closeProModal}
+            class="absolute top-4 right-4 text-slate-400 transition hover:text-slate-600"
+          >
+            <i data-lucide="x" class="h-5 w-5"></i>
           </button>
           <div
-            class="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i data-lucide="crown" class="w-8 h-8 fill-amber-500 animate-bounce"></i>
+            class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-500"
+          >
+            <i data-lucide="crown" class="h-8 w-8 animate-bounce fill-amber-500"></i>
           </div>
           <h3 class="text-xl font-extrabold text-slate-900 dark:text-white">LANLink Pro 업그레이드</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-            '실시간 고화질 화면 및 음성 동시 녹화', '비밀번호 세션 잠금', '초저지연 보이스 토크' 기능은 정식 런칭 시 Pro 패키지로 분류됩니다.
+          <p class="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            '실시간 고화질 화면 및 음성 동시 녹화', '비밀번호 세션 잠금', '초저지연 보이스 토크' 기능은 정식 런칭 시 Pro
+            패키지로 분류됩니다.
           </p>
           <div
-            class="my-6 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-left space-y-2.5">
+            class="my-6 space-y-2.5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-left dark:border-slate-800 dark:bg-slate-950"
+          >
             <div class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
-              <i data-lucide="check" class="w-4 h-4 text-amber-500"></i> 오디오와 미디어가 자동 정렬되는 60FPS 회의 녹화
+              <i data-lucide="check" class="h-4 w-4 text-amber-500"></i> 오디오와 미디어가 자동 정렬되는 60FPS 회의 녹화
             </div>
             <div class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
-              <i data-lucide="check" class="w-4 h-4 text-amber-500"></i> 사내 전원 비밀번호 잠금 설정 및 비공개 세션 개설
+              <i data-lucide="check" class="h-4 w-4 text-amber-500"></i> 사내 전원 비밀번호 잠금 설정 및 비공개 세션
+              개설
             </div>
             <div class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
-              <i data-lucide="check" class="w-4 h-4 text-amber-500"></i> 다이렉트 보이스 채널링 개설 (WebRTC VoIP)
+              <i data-lucide="check" class="h-4 w-4 text-amber-500"></i> 다이렉트 보이스 채널링 개설 (WebRTC VoIP)
             </div>
           </div>
           <div class="flex gap-3">
-            <button @click=${this.closeProModal}
-              class="grow bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl text-sm transition">
+            <button
+              @click=${this.closeProModal}
+              class="grow rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700 transition dark:bg-slate-800 dark:text-slate-300"
+            >
               다음에 하기
             </button>
-            <button @click=${this.upgradeSuccess}
-              class="grow bg-linear-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black py-3 rounded-xl text-sm transition">
+            <button
+              @click=${this.upgradeSuccess}
+              class="bg-linear-gradient-to-r grow rounded-xl from-amber-500 to-orange-500 py-3 text-sm font-black text-slate-950 transition hover:from-amber-600 hover:to-orange-600"
+            >
               업그레이드 (구독)
             </button>
           </div>
@@ -1171,9 +1365,13 @@ export class MyElement extends LitElement {
 
   private renderToast() {
     return html`
-      <div id="toast"
-        class="transition-all duration-300 ${this.toastVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'} fixed bottom-6 right-6 z-50 bg-white dark:bg-slate-900 border border-blue-500 text-slate-800 dark:text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 text-sm">
-        <i data-lucide="info" class="w-4 h-4 text-google-blue"></i>
+      <div
+        id="toast"
+        class="${this.toastVisible
+          ? "opacity-100 translate-y-0"
+          : "opacity-0 translate-y-4 pointer-events-none"} fixed right-6 bottom-6 z-50 flex items-center gap-2 rounded-xl border border-blue-500 bg-white px-5 py-3 text-sm text-slate-800 shadow-xl transition-all duration-300 dark:bg-slate-900 dark:text-white"
+      >
+        <i data-lucide="info" class="text-google-blue h-4 w-4"></i>
         <span id="toast-message">${this.toastMessage}</span>
       </div>
     `;

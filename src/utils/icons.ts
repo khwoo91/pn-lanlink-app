@@ -24,14 +24,19 @@ import {
   Pointer,
   PlayCircle,
   Mic,
+  MicOff,
   MousePointerClick,
   UserPlus,
   Check,
   Link,
-  Loader
-} from 'lucide';
+  Loader,
+  ArrowRight,
+  Minimize,
+  Maximize,
+} from "lucide";
 
 export const globalIcons = {
+  ArrowRight,
   Users,
   Copy,
   Lock,
@@ -57,9 +62,12 @@ export const globalIcons = {
   Pointer,
   PlayCircle,
   Mic,
+  MicOff,
   MousePointerClick,
   UserPlus,
   Check,
   Link,
-  Loader
+  Loader,
+  Minimize,
+  Maximize,
 };
