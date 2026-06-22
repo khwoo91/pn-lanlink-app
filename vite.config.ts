@@ -58,7 +58,7 @@ export default defineConfig({
           }
         }
 
-        wss.on('connection', (ws: any) => {
+        (wss as any).on('connection', (ws: any) => {
           // Send server detected IP to client
           ws.send(JSON.stringify({
             type: 'server-info',
