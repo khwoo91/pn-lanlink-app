@@ -137,6 +137,12 @@ export class MyElement extends LitElement {
     this.applyTheme(this.currentTheme);
     this.currentNickname = getNickname() || "참여자";
 
+    const myCreatedRoomCode = localStorage.getItem("my_created_room_code");
+    if (myCreatedRoomCode) {
+      this.isRoomLocked = localStorage.getItem("my_created_room_locked") === "true";
+      this.hostPasswordHash = localStorage.getItem("my_created_room_password_hash") || hashPassword("");
+    }
+
     // Start auto carousel cycling every 5 seconds
     this.startCarouselInterval();
 
@@ -668,6 +674,8 @@ export class MyElement extends LitElement {
 
     // 로컬 스토리지에 내가 개설한 방 코드 저장 (새로고침 시 방장 권한 복구용)
     localStorage.setItem("my_created_room_code", this.activeRoomCode);
+    localStorage.setItem("my_created_room_locked", String(this.isRoomLocked));
+    localStorage.setItem("my_created_room_password_hash", this.hostPasswordHash);
 
     // Simulate real screen capture stream
     this.screenStream = await captureScreen();
@@ -687,6 +695,7 @@ export class MyElement extends LitElement {
         ip: this.serverDetectedIp || window.location.hostname,
         code: this.activeRoomCode,
         locked: this.isRoomLocked,
+        passwordHash: this.hostPasswordHash,
         fps: 30,
       },
     });
