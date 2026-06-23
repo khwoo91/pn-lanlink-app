@@ -45,7 +45,8 @@ export class MyElement extends LitElement {
       changedProperties.has("nicknameModalOpen") ||
       changedProperties.has("proModalOpen") ||
       changedProperties.has("toastVisible") ||
-      changedProperties.has("alertModalOpen")
+      changedProperties.has("alertModalOpen") ||
+      changedProperties.has("hasSavedHostSession")
     ) {
       createIcons({
         icons: globalIcons,
@@ -63,6 +64,8 @@ export class MyElement extends LitElement {
   @state() private hostSetupOpen: boolean = false;
   @state() private isRoomLocked: boolean = false;
   @state() private hostPasswordHash: string = hashPassword("");
+  @state() private hasSavedHostSession: boolean = false;
+  @state() private savedHostRoomCode: string = "";
   @state() private currentNickname: string = "참여자";
   @state() private currentTheme: string = "light";
   @state() private carouselIndex: number = 0;
@@ -141,6 +144,8 @@ export class MyElement extends LitElement {
     if (myCreatedRoomCode) {
       this.isRoomLocked = localStorage.getItem("my_created_room_locked") === "true";
       this.hostPasswordHash = localStorage.getItem("my_created_room_password_hash") || hashPassword("");
+      this.hasSavedHostSession = true;
+      this.savedHostRoomCode = myCreatedRoomCode;
     }
 
     // Start auto carousel cycling every 5 seconds
@@ -154,6 +159,17 @@ export class MyElement extends LitElement {
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get("room");
     const ipParam = params.get("ip");
+
+    // 만약 URL 파라미터로 들어온 게스트의 입장 시도 room 번호가 내가 개설한 방과 다르다면,
+    // 혼란을 방지하기 위해 저장된 내 방 세션 정보를 삭제합니다.
+    if (roomParam && myCreatedRoomCode && roomParam !== myCreatedRoomCode) {
+      localStorage.removeItem("my_created_room_code");
+      localStorage.removeItem("my_created_room_locked");
+      localStorage.removeItem("my_created_room_password_hash");
+      this.hasSavedHostSession = false;
+      this.savedHostRoomCode = "";
+    }
+
     if (roomParam) {
       this.pendingRoomJoinCode = roomParam;
       this.pendingRoomJoinIp = ipParam || "";
@@ -715,6 +731,11 @@ export class MyElement extends LitElement {
 
     // 로컬 스토리지 방 코드 정리 및 0명 폭파 타이머 정리
     localStorage.removeItem("my_created_room_code");
+    localStorage.removeItem("my_created_room_locked");
+    localStorage.removeItem("my_created_room_password_hash");
+    this.hasSavedHostSession = false;
+    this.savedHostRoomCode = "";
+
     if (this.emptyRoomTimeout) {
       clearTimeout(this.emptyRoomTimeout);
       this.emptyRoomTimeout = undefined;
@@ -730,6 +751,60 @@ export class MyElement extends LitElement {
       to: "server",
       ip: this.serverDetectedIp || window.location.hostname,
     });
+  }
+
+  private async restoreHostSession() {
+    const myCreatedRoomCode = localStorage.getItem("my_created_room_code");
+    if (!myCreatedRoomCode) {
+      this.hasSavedHostSession = false;
+      this.savedHostRoomCode = "";
+      return;
+    }
+
+    // 1. 화면 캡처 수행 (사용자 제스처 컨텍스트)
+    const stream = await captureScreen();
+    if (!stream) {
+      this.showToast("⚠️ 화면 공유 복원이 취소되었습니다.");
+      return;
+    }
+    this.screenStream = stream;
+
+    // 2. 방장 설정 상태 복원
+    this.activeRoomCode = myCreatedRoomCode;
+    this.isRoomLocked = localStorage.getItem("my_created_room_locked") === "true";
+    this.hostPasswordHash = localStorage.getItem("my_created_room_password_hash") || hashPassword("");
+    this.hasSavedHostSession = false;
+
+    this.hostSetupOpen = false;
+    this.currentScreen = "host";
+    this.viewerCount = 0;
+    this.activeParticipants = [this.currentNickname];
+
+    // 3. 시그널링 서버에 동일 방 정보로 재등록
+    this.sendSignalingMessage({
+      type: "room-register",
+      from: "host",
+      to: "server",
+      room: {
+        name: `${this.currentNickname} 님의 방`,
+        ip: this.serverDetectedIp || window.location.hostname,
+        code: this.activeRoomCode,
+        locked: this.isRoomLocked,
+        passwordHash: this.hostPasswordHash,
+        fps: 30,
+      },
+    });
+
+    this.showToast("🚀 이전 화면 공유 세션이 성공적으로 복원되었습니다!");
+  }
+
+  private clearSavedHostSession() {
+    localStorage.removeItem("my_created_room_code");
+    localStorage.removeItem("my_created_room_locked");
+    localStorage.removeItem("my_created_room_password_hash");
+    this.hasSavedHostSession = false;
+    this.savedHostRoomCode = "";
+    this.showToast("🗑️ 이전 세션 정보가 삭제되었습니다.");
   }
 
   private async changeSharedScreen() {
@@ -1127,6 +1202,48 @@ export class MyElement extends LitElement {
                 id="landing-container"
                 class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center space-y-10"
               >
+                <!-- Restore Session Banner -->
+                ${this.hasSavedHostSession
+                  ? html`
+                      <div class="w-full animate-in fade-in slide-in-from-top-4 duration-300">
+                        <div class="relative overflow-hidden rounded-3xl border border-blue-500/20 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 p-6 backdrop-blur-md dark:border-blue-500/30 dark:from-blue-950/40 dark:to-indigo-950/40">
+                          <!-- Decorative background glow -->
+                          <div class="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-blue-400/20 blur-2xl dark:bg-blue-500/10"></div>
+                          
+                          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex items-center gap-4">
+                              <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                                <i data-lucide="refresh-cw" class="h-6 w-6"></i>
+                              </div>
+                              <div class="text-left">
+                                <h4 class="font-bold text-slate-900 dark:text-white">이전 화면 공유 방 복원</h4>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">
+                                  새로고침 전에 개설하셨던 방(코드: <span class="font-mono font-bold text-blue-600 dark:text-blue-400">${this.savedHostRoomCode}</span>)이 감지되었습니다. 이전 설정으로 바로 공유를 시작할까요?
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2 self-end sm:self-center">
+                              <button
+                                @click=${this.clearSavedHostSession}
+                                class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                              >
+                                삭제하기
+                              </button>
+                              <button
+                                @click=${this.restoreHostSession}
+                                class="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95"
+                              >
+                                <i data-lucide="play" class="h-4 w-4"></i>
+                                방 복원하기
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    `
+                  : ""}
+
                 <!-- Column: 내가 개설한 방 (Hero) -->
                 <ll-hero
                   .hostSetupOpen=${this.hostSetupOpen}

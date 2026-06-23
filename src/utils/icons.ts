@@ -35,6 +35,8 @@ import {
   Maximize,
   ScreenShare,
   MonitorOff,
+  RefreshCw,
+  Play,
 } from "lucide";
 
 export const globalIcons = {
@@ -74,4 +76,6 @@ export const globalIcons = {
   Maximize,
   ScreenShare,
   MonitorOff,
+  RefreshCw,
+  Play,
 };
