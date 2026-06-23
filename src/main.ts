@@ -1223,18 +1223,18 @@ export class MyElement extends LitElement {
                               </div>
                             </div>
                             
-                            <div class="flex items-center gap-2 self-end sm:self-center">
+                            <div class="flex shrink-0 items-center gap-2 self-end sm:self-center">
                               <button
                                 @click=${this.clearSavedHostSession}
-                                class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                                class="whitespace-nowrap rounded-xl px-4 py-2 text-xs font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                               >
                                 삭제하기
                               </button>
                               <button
                                 @click=${this.restoreHostSession}
-                                class="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95"
+                                class="flex whitespace-nowrap items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95"
                               >
-                                <i data-lucide="play" class="h-4 w-4"></i>
+                                <i data-lucide="play" class="h-4 w-4 shrink-0"></i>
                                 방 복원하기
                               </button>
                             </div>

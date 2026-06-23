@@ -99,7 +99,7 @@ export class LlHero extends LitElement {
                     <span class="text-[10px] text-slate-400">설정된 비밀번호를 아는 사람만 참여를 허용합니다.</span>
                   </div>
                 </div>
-                <div class="relative flex items-center">
+                <div class="relative flex items-center shrink-0">
                   <input
                     type="checkbox"
                     id="toggle-lock"
