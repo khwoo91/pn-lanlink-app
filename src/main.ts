@@ -644,6 +644,11 @@ export class MyElement extends LitElement {
   }
 
   private async onStartSharing(e: CustomEvent<{ password: string }>) {
+    console.log("[LANLink debug] onStartSharing:", {
+      password: e.detail.password,
+      isRoomLocked: this.isRoomLocked,
+      hashGenerated: hashPassword(e.detail.password || "")
+    });
     if (this.isRoomLocked && (!e.detail.password || e.detail.password.trim() === "")) {
       this.openAlertModal("비밀번호를 설정해주세요.");
       return;
@@ -773,6 +778,7 @@ export class MyElement extends LitElement {
   }
 
   private checkPasswordAndJoin(name: string, ip: string, isLocked: boolean, passwordHash?: string) {
+    console.log("[LANLink debug] checkPasswordAndJoin:", { name, ip, isLocked, passwordHash });
     this.tempJoinName = name;
     this.tempJoinIp = ip;
     this.targetRoomPasswordHash = passwordHash || "";
@@ -786,6 +792,12 @@ export class MyElement extends LitElement {
 
   private onSubmitVerifyPassword(e: CustomEvent<{ password: string }>) {
     const entered = e.detail.password;
+    console.log("[LANLink debug] onSubmitVerifyPassword:", {
+      entered,
+      targetRoomPasswordHash: this.targetRoomPasswordHash,
+      enteredHash: hashPassword(entered),
+      isMatched: verifyPassword(entered, this.targetRoomPasswordHash)
+    });
 
     // Verify password using target room's password hash
     if (verifyPassword(entered, this.targetRoomPasswordHash)) {

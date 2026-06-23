@@ -42,7 +42,7 @@ export class ModalPassword extends LitElement {
             <input
               type="password"
               id="input-verify-password"
-              placeholder="비밀번호 4자리 입력"
+              placeholder="비밀번호 입력"
               class="focus:border-google-blue w-full rounded-xl border border-slate-200 bg-slate-100 py-2.5 text-center font-mono text-sm tracking-widest text-slate-800 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white"
             />
           </div>

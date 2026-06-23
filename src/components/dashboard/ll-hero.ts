@@ -124,7 +124,7 @@ export class LlHero extends LitElement {
                 type="password"
                 id="host-password-input"
                 .value=${this.hostPassword}
-                placeholder="입장 비밀번호 입력"
+                placeholder="비밀번호 입력"
                 class="focus:border-google-blue w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-800 shadow-sm placeholder:text-xs focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white"
               />
             </div>
