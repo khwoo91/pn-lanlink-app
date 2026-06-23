@@ -3,6 +3,7 @@ export interface LANRoom {
   ip: string;
   code: string;
   locked: boolean;
+  passwordHash?: string;
   fps: number;
 }
 

@@ -80,6 +80,7 @@ export class LlMdnsList extends LitElement {
           name: room.name,
           ip: room.ip,
           locked: room.locked,
+          passwordHash: room.passwordHash,
         },
         bubbles: true,
         composed: true,

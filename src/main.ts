@@ -120,6 +120,7 @@ export class MyElement extends LitElement {
   private viewerConnection: RTCPeerConnection | null = null;
   private viewerDataChannel: RTCDataChannel | null = null;
   @state() protected activeStream: MediaStream | null = null;
+  private targetRoomPasswordHash: string = "";
 
   connectedCallback() {
     super.connectedCallback();
@@ -244,6 +245,7 @@ export class MyElement extends LitElement {
             ip: this.serverDetectedIp || window.location.hostname,
             code: this.activeRoomCode,
             locked: this.isRoomLocked,
+            passwordHash: this.hostPasswordHash,
             fps: 30,
           },
         });
@@ -268,6 +270,7 @@ export class MyElement extends LitElement {
                 ip: this.serverDetectedIp,
                 code: this.activeRoomCode,
                 locked: this.isRoomLocked,
+                passwordHash: this.hostPasswordHash,
                 fps: 30,
               },
             });
@@ -284,7 +287,7 @@ export class MyElement extends LitElement {
 
             const foundRoom = this.scannedRooms.find((r) => r.code === code || r.ip === code || r.name.includes(code));
             if (foundRoom) {
-              this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked);
+              this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked, foundRoom.passwordHash);
             } else {
               // 룸 목록에서 정확히 찾지 못했을 경우 링크에 동봉된 ipParam 주소를 우선 탑재하여 조인
               const targetIp =
@@ -755,7 +758,7 @@ export class MyElement extends LitElement {
 
     if (foundRoom) {
       this.pendingRoomJoinCode = foundRoom.code;
-      this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked);
+      this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked, foundRoom.passwordHash);
     } else {
       // 대기방 목록에 없더라도 입력된 숫자를 룸 번호로 간주하여 강제 다이렉트 조인 시도
       this.pendingRoomJoinCode = code;
@@ -765,13 +768,14 @@ export class MyElement extends LitElement {
     }
   }
 
-  private onSelectRoom(e: CustomEvent<{ name: string; ip: string; locked: boolean }>) {
-    this.checkPasswordAndJoin(e.detail.name, e.detail.ip, e.detail.locked);
+  private onSelectRoom(e: CustomEvent<{ name: string; ip: string; locked: boolean; passwordHash?: string }>) {
+    this.checkPasswordAndJoin(e.detail.name, e.detail.ip, e.detail.locked, e.detail.passwordHash);
   }
 
-  private checkPasswordAndJoin(name: string, ip: string, isLocked: boolean) {
+  private checkPasswordAndJoin(name: string, ip: string, isLocked: boolean, passwordHash?: string) {
     this.tempJoinName = name;
     this.tempJoinIp = ip;
+    this.targetRoomPasswordHash = passwordHash || "";
 
     if (isLocked) {
       this.passwordVerifyModalOpen = true;
@@ -783,13 +787,13 @@ export class MyElement extends LitElement {
   private onSubmitVerifyPassword(e: CustomEvent<{ password: string }>) {
     const entered = e.detail.password;
 
-    // Verify password using crypto helper
-    if (verifyPassword(entered, this.hostPasswordHash)) {
+    // Verify password using target room's password hash
+    if (verifyPassword(entered, this.targetRoomPasswordHash)) {
       this.passwordVerifyModalOpen = false;
       this.joinRoomDirectly();
-      this.showToast(`🔑 인증에 성공했습니다. [${this.tempJoinName}] 님의 화면을 수신합니다.`);
+      this.showToast(`[${this.tempJoinName}] 님의 공유방에 성공적으로 참여하였습니다.`);
     } else {
-      this.showToast("❌ 비밀번호가 올바르지 않습니다. (기본: 1234)");
+      this.showToast("비밀번호가 일치하지 않습니다.");
     }
   }
 
@@ -818,10 +822,11 @@ export class MyElement extends LitElement {
           ip: this.serverDetectedIp || window.location.hostname,
           code: this.activeRoomCode,
           locked: this.isRoomLocked,
+          passwordHash: this.hostPasswordHash,
           fps: 30,
         },
       });
-      this.showToast("🚀 내 방장 세션이 성공적으로 복원되었습니다!");
+      this.showToast("[방장] 화면 공유가 성공적으로 복원되었습니다.");
       return;
     }
 
