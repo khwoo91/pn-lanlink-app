@@ -260,7 +260,7 @@ export class MyElement extends LitElement {
     const socket = new WebSocket(signalingUrl);
 
     socket.onopen = () => {
-      console.log("WebSocket signaling connected.");
+      // console.log("WebSocket signaling connected.");
       this.websocket = socket;
       this.isSignalingConnected = true;
 
@@ -287,7 +287,7 @@ export class MyElement extends LitElement {
 
         if (msg.type === "server-info") {
           this.serverDetectedIp = msg.ip;
-          console.log("Server detected IP:", this.serverDetectedIp);
+          // console.log("Server detected IP:", this.serverDetectedIp);
 
           if (this.currentScreen === "host") {
             this.sendSignalingMessage({
@@ -679,7 +679,7 @@ export class MyElement extends LitElement {
     console.log("[LANLink debug] onStartSharing:", {
       password: e.detail.password,
       isRoomLocked: this.isRoomLocked,
-      hashGenerated: hashPassword(e.detail.password || "")
+      hashGenerated: hashPassword(e.detail.password || ""),
     });
     if (this.isRoomLocked && (!e.detail.password || e.detail.password.trim() === "")) {
       this.openAlertModal("비밀번호를 설정해주세요.");
@@ -867,7 +867,9 @@ export class MyElement extends LitElement {
     }
   }
 
-  private onSelectRoom(e: CustomEvent<{ name: string; ip: string; locked: boolean; code: string; passwordHash?: string }>) {
+  private onSelectRoom(
+    e: CustomEvent<{ name: string; ip: string; locked: boolean; code: string; passwordHash?: string }>
+  ) {
     this.pendingRoomJoinCode = e.detail.code;
     this.checkPasswordAndJoin(e.detail.name, e.detail.ip, e.detail.locked, e.detail.passwordHash);
   }
@@ -900,7 +902,7 @@ export class MyElement extends LitElement {
       entered,
       targetRoomPasswordHash: this.targetRoomPasswordHash,
       enteredHash,
-      isMatched: verifyPassword(entered, this.targetRoomPasswordHash)
+      isMatched: verifyPassword(entered, this.targetRoomPasswordHash),
     });
 
     // Verify password using target room's password hash
@@ -909,7 +911,7 @@ export class MyElement extends LitElement {
       this.joinRoomDirectly();
       this.showToast(`[${this.tempJoinName}] 님의 공유방에 성공적으로 참여하였습니다.`);
     } else {
-      const debugMsg = `비밀번호가 일치하지 않습니다.\n(입력: ${enteredHash.slice(0, 8)}... / 대상: ${targetHash ? targetHash.slice(0, 8) + '...' : '없음'})`;
+      const debugMsg = `비밀번호가 일치하지 않습니다.\n(입력: ${enteredHash.slice(0, 8)}... / 대상: ${targetHash ? targetHash.slice(0, 8) + "..." : "없음"})`;
       this.showToast(debugMsg);
     }
   }
@@ -1200,50 +1202,8 @@ export class MyElement extends LitElement {
           ? html`
               <div
                 id="landing-container"
-                class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center space-y-10"
+                class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center space-y-2"
               >
-                <!-- Restore Session Banner -->
-                ${this.hasSavedHostSession
-                  ? html`
-                      <div class="w-full animate-in fade-in slide-in-from-top-4 duration-300">
-                        <div class="relative overflow-hidden rounded-3xl border border-blue-500/20 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 p-6 backdrop-blur-md dark:border-blue-500/30 dark:from-blue-950/40 dark:to-indigo-950/40">
-                          <!-- Decorative background glow -->
-                          <div class="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-blue-400/20 blur-2xl dark:bg-blue-500/10"></div>
-                          
-                          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="flex items-center gap-4">
-                              <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                                <i data-lucide="refresh-cw" class="h-6 w-6"></i>
-                              </div>
-                              <div class="text-left">
-                                <h4 class="font-bold text-slate-900 dark:text-white">이전 화면 공유 방 복원</h4>
-                                <p class="text-sm text-slate-500 dark:text-slate-400">
-                                  새로고침 전에 개설하셨던 방(코드: <span class="font-mono font-bold text-blue-600 dark:text-blue-400">${this.savedHostRoomCode}</span>)이 감지되었습니다. 이전 설정으로 바로 공유를 시작할까요?
-                                </p>
-                              </div>
-                            </div>
-                            
-                            <div class="flex shrink-0 items-center gap-2 self-end sm:self-center">
-                              <button
-                                @click=${this.clearSavedHostSession}
-                                class="whitespace-nowrap rounded-xl px-4 py-2 text-xs font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                              >
-                                삭제하기
-                              </button>
-                              <button
-                                @click=${this.restoreHostSession}
-                                class="flex whitespace-nowrap items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95"
-                              >
-                                <i data-lucide="play" class="h-4 w-4 shrink-0"></i>
-                                방 복원하기
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    `
-                  : ""}
-
                 <!-- Column: 내가 개설한 방 (Hero) -->
                 <ll-hero
                   .hostSetupOpen=${this.hostSetupOpen}
@@ -1254,6 +1214,57 @@ export class MyElement extends LitElement {
                   @join-room=${this.onJoinRoom}
                   class="w-full"
                 ></ll-hero>
+
+                <!-- Restore Session Banner -->
+                ${this.hasSavedHostSession
+                  ? html`
+                      <div class="animate-in fade-in slide-in-from-top-4 mb-5 w-full duration-304">
+                        <div
+                          class="relative mx-auto max-w-xl overflow-hidden rounded-3xl border border-blue-500/20 bg-linear-to-r from-blue-50/80 to-indigo-50/80 p-6 backdrop-blur-md dark:border-blue-500/30 dark:from-blue-950/40 dark:to-indigo-950/40"
+                        >
+                          <!-- Decorative background glow -->
+                          <div
+                            class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-blue-400/20 blur-2xl dark:bg-blue-500/10"
+                          ></div>
+
+                          <div class="flex flex-col gap-4 sm:items-start sm:justify-between">
+                            <div class="flex items-center gap-4">
+                              <div
+                                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
+                              >
+                                <i data-lucide="refresh-cw" class="h-6 w-6"></i>
+                              </div>
+                              <div class="text-left">
+                                <h4 class="font-bold text-slate-900 dark:text-white">이전 화면 공유 방 복원</h4>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">
+                                  이전 생성했던 방(코드:
+                                  <span class="font-mono font-bold text-blue-600 dark:text-blue-400"
+                                    >${this.savedHostRoomCode}</span
+                                  >)이 감지되었습니다.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div class="flex shrink-0 gap-2 self-end">
+                              <button
+                                @click=${this.clearSavedHostSession}
+                                class="rounded-xl px-4 py-2 text-xs font-semibold whitespace-nowrap text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                              >
+                                삭제
+                              </button>
+                              <button
+                                @click=${this.restoreHostSession}
+                                class="flex items-center gap-2 rounded-xl bg-blue-600 py-2.5 pr-5 pl-4 text-xs font-bold whitespace-nowrap text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95"
+                              >
+                                <i data-lucide="play" class="h-4 w-4 shrink-0"></i>
+                                다시 연결하기
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    `
+                  : ""}
 
                 <!-- Column: 대기방 감지 -->
                 <ll-mdns-list
@@ -1377,14 +1388,7 @@ export class MyElement extends LitElement {
                       class="relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 dark:border-slate-800"
                     >
                       ${this.screenStream
-                        ? html`
-                            <video
-                              class="h-full w-full object-contain"
-                              autoplay
-                              muted
-                              playsinline
-                            ></video>
-                          `
+                        ? html` <video class="h-full w-full object-contain" autoplay muted playsinline></video> `
                         : html`
                             <div class="flex h-full w-full flex-col items-center justify-center text-slate-400">
                               <i data-lucide="monitor-off" class="mb-2 h-10 w-10"></i>

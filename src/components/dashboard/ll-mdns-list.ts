@@ -21,9 +21,11 @@ export class LlMdnsList extends LitElement {
 
   render() {
     return html`
-      <div class="mx-auto w-full max-w-xl space-y-4 border-t border-slate-200 pt-6 dark:border-slate-800">
+      <div class="mx-auto w-full max-w-xl space-y-4 border-t border-slate-200 pt-4 dark:border-slate-800">
         <!-- Scanned rooms count -->
-        <div class="flex items-center justify-between px-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <div
+          class="mb-10 flex items-center justify-between px-1 text-xs font-semibold text-slate-500 dark:text-slate-400"
+        >
           <span class="flex items-center gap-1.5">
             <i data-lucide="search" class="text-google-blue h-3.5 w-3.5"></i>
             동일 IP 공유방 목록

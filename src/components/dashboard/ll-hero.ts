@@ -45,7 +45,7 @@ export class LlHero extends LitElement {
               @click=${this.onToggleHostSetupDrawer}
               class="bg-google-blue hover:bg-google-blueHover flex shrink-0 items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors"
             >
-              <i data-lucide="video" class="h-4 w-4 fill-white"></i> 새 공유방 개설
+              <i data-lucide="video" class="h-4 w-4 fill-white"></i> 새 공유방 생성
             </button>
 
             <!-- Code input -->
@@ -99,7 +99,7 @@ export class LlHero extends LitElement {
                     <span class="text-[10px] text-slate-400">설정된 비밀번호를 아는 사람만 참여를 허용합니다.</span>
                   </div>
                 </div>
-                <div class="relative flex items-center shrink-0">
+                <div class="relative flex shrink-0 items-center">
                   <input
                     type="checkbox"
                     id="toggle-lock"
