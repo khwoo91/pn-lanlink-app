@@ -30,6 +30,13 @@ export class LlViewer extends LitElement {
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
+
+    // Safely assign srcObject to the video element to prevent flickering on other state updates
+    const videoEl = this.querySelector("video") as HTMLVideoElement | null;
+    if (videoEl && videoEl.srcObject !== this.stream) {
+      videoEl.srcObject = this.stream;
+    }
+
     if (changedProperties.has("localMuted") || changedProperties.has("isFullScreen")) {
       createIcons({
         icons: globalIcons,
@@ -94,7 +101,6 @@ export class LlViewer extends LitElement {
                 ? html`
                     <video
                       class="absolute inset-0 z-0 h-full w-full object-contain"
-                      .srcObject=${this.stream}
                       autoplay
                       playsinline
                     ></video>

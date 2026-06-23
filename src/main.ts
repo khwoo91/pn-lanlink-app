@@ -33,6 +33,13 @@ export class MyElement extends LitElement {
   }
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
+
+    // Safely assign srcObject to the host preview video element to prevent flickering
+    const videoEl = this.querySelector("#sharing-active-workspace video") as HTMLVideoElement | null;
+    if (videoEl && videoEl.srcObject !== this.screenStream) {
+      videoEl.srcObject = this.screenStream;
+    }
+
     if (
       changedProperties.has("currentScreen") ||
       changedProperties.has("nicknameModalOpen") ||
@@ -1224,7 +1231,6 @@ export class MyElement extends LitElement {
                         ? html`
                             <video
                               class="h-full w-full object-contain"
-                              .srcObject=${this.screenStream}
                               autoplay
                               muted
                               playsinline
