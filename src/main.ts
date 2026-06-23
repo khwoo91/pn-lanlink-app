@@ -37,7 +37,8 @@ export class MyElement extends LitElement {
       changedProperties.has("currentScreen") ||
       changedProperties.has("nicknameModalOpen") ||
       changedProperties.has("proModalOpen") ||
-      changedProperties.has("toastVisible")
+      changedProperties.has("toastVisible") ||
+      changedProperties.has("alertModalOpen")
     ) {
       createIcons({
         icons: globalIcons,
@@ -53,14 +54,13 @@ export class MyElement extends LitElement {
   // Coordinator state
   @state() private currentScreen: "landing" | "host" | "viewer" = "landing";
   @state() private hostSetupOpen: boolean = false;
-  @state() private isRoomLocked: boolean = true;
-  @state() private hostPasswordHash: string = hashPassword("1234");
+  @state() private isRoomLocked: boolean = false;
+  @state() private hostPasswordHash: string = hashPassword("");
   @state() private currentNickname: string = "참여자";
   @state() private currentTheme: string = "light";
   @state() private carouselIndex: number = 0;
   @state() private viewerCount: number = 0;
   @state() private localMuted: boolean = true;
-  @state() private annotationVisible: boolean = false;
   @state() private scannedRooms: LANRoom[] = [];
   @state() private serverDetectedIp: string = "";
   @state() private pendingRoomJoinCode: string = "";
@@ -89,15 +89,12 @@ export class MyElement extends LitElement {
   @state() private idleSafeguardOpen: boolean = false;
   @state() private idleCountdown: number = 60;
   @state() private activeParticipants: string[] = [];
+  @state() private alertModalOpen: boolean = false;
+  @state() private alertModalMessage: string = "";
 
   // Toast feedback state
   @state() private toastMessage: string = "";
   @state() private toastVisible: boolean = false;
-
-  // Virtual Remote Click cursor simulator
-  @state() private cursorVisible: boolean = false;
-  @state() private cursorX: number = 33;
-  @state() private cursorY: number = 50;
 
   // Temporary join room context
   @state() private tempJoinName: string = "";
@@ -354,11 +351,7 @@ export class MyElement extends LitElement {
     });
 
     pc.onconnectionstatechange = () => {
-      if (
-        pc.connectionState === "disconnected" ||
-        pc.connectionState === "failed" ||
-        pc.connectionState === "closed"
-      ) {
+      if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
         this.handlePeerLeave(viewerId);
       }
     };
@@ -604,9 +597,9 @@ export class MyElement extends LitElement {
   private onToggleLock(e: CustomEvent<{ checked: boolean }>) {
     this.isRoomLocked = e.detail.checked;
     if (this.isRoomLocked) {
-      this.showToast("🔒 세션 잠금이 활성화되었습니다. 비밀번호를 설정하세요.");
+      this.showToast("🔒 잠금이 활성화되었습니다.");
     } else {
-      this.showToast("🔓 세션 잠금이 비활성화되었습니다. 누구나 링크로 자유 접속 가능합니다.");
+      this.showToast("🔓 잠금이 비활성화되었습니다.");
     }
   }
 
@@ -638,8 +631,22 @@ export class MyElement extends LitElement {
     }
   }
 
+  private openAlertModal(message: string) {
+    this.alertModalMessage = message;
+    this.alertModalOpen = true;
+  }
+
+  private closeAlertModal() {
+    this.alertModalOpen = false;
+  }
+
   private async onStartSharing(e: CustomEvent<{ password: string }>) {
-    this.hostPasswordHash = hashPassword(e.detail.password || "1234");
+    if (this.isRoomLocked && (!e.detail.password || e.detail.password.trim() === "")) {
+      this.openAlertModal("비밀번호를 설정해주세요.");
+      return;
+    }
+
+    this.hostPasswordHash = hashPassword(e.detail.password || "");
 
     // Generate dynamic room code
     this.activeRoomCode = this.generateRoomCode();
@@ -903,28 +910,7 @@ export class MyElement extends LitElement {
     }
 
     setStreamAudioEnabled(this.micStream, !this.localMuted);
-    this.showToast(
-      this.localMuted ? "마이크가 음소거되었습니다." : "마이크가 켜졌습니다."
-    );
-  }
-
-  // --- Annotation Overlay Toggle ---
-  private toggleAnnotationOverlay() {
-    this.annotationVisible = !this.annotationVisible;
-    this.showToast(
-      this.annotationVisible ? "화면 드로잉 레이어가 표시됩니다." : "화면 드로잉 레이어가 숨겨집니다."
-    );
-  }
-
-  // --- Virtual Pointer Click Simulation ---
-  private simulateClick() {
-    this.cursorVisible = true;
-    this.cursorX = Math.floor(Math.random() * 40 + 20); // range 20% to 60%
-    this.cursorY = Math.floor(Math.random() * 40 + 20);
-    this.showToast("가상 원격 마우스 클릭");
-    setTimeout(() => {
-      this.cursorVisible = false;
-    }, 2000);
+    this.showToast(this.localMuted ? "마이크가 음소거되었습니다." : "마이크가 켜졌습니다.");
   }
 
   // --- Real-time Local Chat ---
@@ -1076,7 +1062,7 @@ export class MyElement extends LitElement {
       </ll-header>
 
       <!-- Main Layout -->
-      <main class="mx-auto flex w-full max-w-5xl grow flex-col justify-center px-4 sm:px-6 py-6 md:py-12">
+      <main class="mx-auto flex w-full max-w-5xl grow flex-col justify-center px-4 py-6 sm:px-6 md:py-12">
         <!-- Landing page panel -->
         ${this.currentScreen === "landing"
           ? html`
@@ -1088,7 +1074,7 @@ export class MyElement extends LitElement {
                 <ll-hero
                   .hostSetupOpen=${this.hostSetupOpen}
                   .isRoomLocked=${this.isRoomLocked}
-                  .hostPassword=${"1234"}
+                  .hostPassword=${""}
                   @toggle-drawer=${this.toggleHostSetupDrawer}
                   @toggle-lock=${this.onToggleLock}
                   @start-sharing=${this.onStartSharing}
@@ -1119,23 +1105,24 @@ export class MyElement extends LitElement {
               <div id="sharing-active-workspace" class="mx-auto flex w-full max-w-7xl flex-col gap-8">
                 <!-- Top Section: 2 Columns (Info Panel & Video Preview) -->
                 <div class="grid grid-cols-1 gap-8 xl:grid-cols-12">
-                  
                   <!-- Left: Host Info, QR Code, Link & Action buttons (5/12) -->
                   <div
-                    class="custom-shadow animate-in zoom-in-95 flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 xl:col-span-5"
+                    class="custom-shadow animate-in zoom-in-95 flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 xl:col-span-5 dark:border-slate-800 dark:bg-slate-900"
                   >
                     <div class="space-y-6">
                       <!-- Title & Participant count -->
-                      <div class="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
+                      <div
+                        class="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800"
+                      >
                         <div class="flex items-start gap-3">
                           <span class="relative top-1.5 flex h-3 w-3">
-                            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                            <span
+                              class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"
+                            ></span>
                             <span class="relative inline-flex h-3 w-3 rounded-full bg-red-500"></span>
                           </span>
                           <div>
-                            <h4 class="text-md font-bold text-slate-900 dark:text-white">
-                              화면공유 중
-                            </h4>
+                            <h4 class="text-md font-bold text-slate-900 dark:text-white">화면공유 중</h4>
                             <p class="text-xs text-slate-500">P2P 스트리밍이 가동되고 있습니다.</p>
                           </div>
                         </div>
@@ -1143,24 +1130,34 @@ export class MyElement extends LitElement {
 
                       <div class="flex flex-col gap-2">
                         <!-- QR Code -->
-                        <div class="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center sm:col-span-5 dark:border-slate-800 dark:bg-slate-950">
-                          <div class="mb-1 flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800">
+                        <div
+                          class="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center sm:col-span-5 dark:border-slate-800 dark:bg-slate-950"
+                        >
+                          <div
+                            class="mb-1 flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800"
+                          >
                             <img
-                              src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(this.getShareUrl())}"
+                              src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                                this.getShareUrl()
+                              )}"
                               class="h-36 w-36 rounded-lg"
                               alt="Share QR Code"
                             />
                           </div>
                           <span class="text-[10px] text-slate-400">간편 QR 코드</span>
-                          <div class="text-2xl text-google-blue font-bold tracking-wider">${this.activeRoomCode}</div>
+                          <div class="text-google-blue text-2xl font-bold tracking-wider">${this.activeRoomCode}</div>
                         </div>
 
                         <!-- Link & Info -->
                         <div class="flex flex-col justify-between gap-3 sm:col-span-7">
                           <div class="space-y-1">
-                            <span class="text-[11px] ml-2 font-bold tracking-wider text-slate-500 uppercase">접속 공유 링크</span>
+                            <span class="ml-2 text-[11px] font-bold tracking-wider text-slate-500 uppercase"
+                              >접속 공유 링크</span
+                            >
                             <div class="flex items-center gap-2">
-                              <div class="grow rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] break-all text-slate-600 select-all dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+                              <div
+                                class="grow rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] break-all text-slate-600 select-all dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                              >
                                 ${this.getShareUrl()}
                               </div>
                               <button
@@ -1185,23 +1182,27 @@ export class MyElement extends LitElement {
                         </p>
                       </div> -->
                     </div>
-
-
                   </div>
 
                   <!-- Right: Host Screen Video Preview (7/12) -->
                   <div
-                    class="custom-shadow animate-in zoom-in-95 flex flex-col rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 xl:col-span-7"
+                    class="custom-shadow animate-in zoom-in-95 flex flex-col rounded-3xl border border-slate-200 bg-white p-6 xl:col-span-7 dark:border-slate-800 dark:bg-slate-900"
                   >
-                    <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4 dark:border-slate-800">
-                      <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <div
+                      class="mb-4 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800"
+                    >
+                      <h4 class="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-white">
                         <i data-lucide="monitor" class="text-google-blue h-4.5 w-4.5"></i>
                         현재 공유된 화면
                       </h4>
-                      <span class="rounded bg-google-blue/10 px-2 py-0.5 text-[10px] font-semibold text-google-blue">실시간 공유 중</span>
+                      <span class="bg-google-blue/10 text-google-blue rounded px-2 py-0.5 text-[10px] font-semibold"
+                        >실시간 공유 중</span
+                      >
                     </div>
 
-                    <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 dark:border-slate-800">
+                    <div
+                      class="relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 dark:border-slate-800"
+                    >
                       ${this.screenStream
                         ? html`
                             <video
@@ -1214,19 +1215,18 @@ export class MyElement extends LitElement {
                           `
                         : html`
                             <div class="flex h-full w-full flex-col items-center justify-center text-slate-400">
-                              <i data-lucide="monitor-off" class="h-10 w-10 mb-2"></i>
+                              <i data-lucide="monitor-off" class="mb-2 h-10 w-10"></i>
                               <span class="text-xs">공유 화면이 없습니다.</span>
                             </div>
                           `}
                     </div>
 
-
-                                        <div class="flex flex-col gap-2 border-t border-slate-200 pt-4 mt-6 dark:border-slate-800">
+                    <div class="mt-6 flex flex-col gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
                       <!-- Action buttons: Change Share Screen / Stop sharing -->
                       <div class="flex flex-col gap-2 sm:flex-row">
                         <button
                           @click=${this.changeSharedScreen}
-                          class="flex grow items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-xs font-bold text-google-blue transition hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400"
+                          class="text-google-blue flex grow items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-xs font-bold transition hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400"
                         >
                           <i data-lucide="screen-share" class="h-4 w-4"></i> 공유 화면 변경
                         </button>
@@ -1240,7 +1240,6 @@ export class MyElement extends LitElement {
                       </div>
                     </div>
                   </div>
-
                 </div>
 
                 <!-- Bottom Section: Chat Room taking full width -->
@@ -1265,18 +1264,12 @@ export class MyElement extends LitElement {
                 .activeRoomName=${this.activeRoomName}
                 .activeRoomIp=${this.activeRoomIp}
                 .localMuted=${this.localMuted}
-                .annotationVisible=${this.annotationVisible}
-                .cursorVisible=${this.cursorVisible}
-                .cursorX=${this.cursorX}
-                .cursorY=${this.cursorY}
                 .chatMessages=${this.chatMessages}
                 .viewerCount=${this.viewerCount}
                 .participants=${this.activeParticipants}
                 .stream=${this.activeStream}
                 .myNickname=${this.currentNickname}
                 @toggle-mute=${this.toggleLocalMute}
-                @simulate-click=${this.simulateClick}
-                @toggle-draw=${this.toggleAnnotationOverlay}
                 @leave-session=${this.leaveSession}
                 @send-message=${this.onSendMessage}
               >
@@ -1317,7 +1310,7 @@ export class MyElement extends LitElement {
         @stop-session=${this.triggerImmediateStop}
       ></modal-saver>
 
-      ${this.renderProModal()} ${this.renderToast()}
+      ${this.renderProModal()} ${this.renderToast()} ${this.renderAlertModal()}
     `;
   }
 
@@ -1337,9 +1330,7 @@ export class MyElement extends LitElement {
           >
             <i data-lucide="user-plus" class="h-6 w-6"></i>
           </div>
-          <h3 class="text-md text-center font-bold text-slate-800 dark:text-white">
-            공유 대화명 설정
-          </h3>
+          <h3 class="text-md text-center font-bold text-slate-800 dark:text-white">공유 대화명 설정</h3>
           <p class="mt-1 text-center text-xs leading-relaxed text-slate-500">
             LANLink는 일회성 닉네임을 사용합니다.<br />대화명을 입력해 주세요.
           </p>
@@ -1443,6 +1434,35 @@ export class MyElement extends LitElement {
       >
         <i data-lucide="info" class="text-google-blue h-4 w-4"></i>
         <span id="toast-message">${this.toastMessage}</span>
+      </div>
+    `;
+  }
+
+  private renderAlertModal() {
+    return html`
+      <div
+        id="alert-modal"
+        class="${this.alertModalOpen
+          ? ""
+          : "hidden"} fixed inset-0 z-100 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+      >
+        <div
+          class="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+        >
+          <h3 class="text-center text-2xl font-bold text-slate-800 dark:text-white">알림</h3>
+          <p class="mt-2 text-center text-sm leading-relaxed font-medium text-slate-500 dark:text-slate-400">
+            ${this.alertModalMessage}
+          </p>
+
+          <div class="mt-5 flex justify-center">
+            <button
+              @click=${this.closeAlertModal}
+              class="bg-google-blue hover:bg-google-blueHover w-full rounded-xl py-2.5 text-xs font-bold text-white transition"
+            >
+              확인
+            </button>
+          </div>
+        </div>
       </div>
     `;
   }

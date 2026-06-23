@@ -35,10 +35,8 @@ export class ModalPassword extends LitElement {
           >
             <i data-lucide="shield-alert" class="h-6 w-6"></i>
           </div>
-          <h3 class="text-md font-bold text-slate-800 dark:text-white">보안 세션 입장 확인</h3>
-          <p class="mt-1 text-xs text-slate-500">
-            호스트가 보안 자산을 보호하기 위해 암호를 적용했습니다.<br />지정된 비밀번호를 입력해주세요.
-          </p>
+          <h3 class="text-md font-bold text-slate-800 dark:text-white">비밀번호 입력</h3>
+          <p class="mt-1 text-xs text-slate-500">참여하기 위해 비밀번호를 입력해주세요.</p>
 
           <div class="my-4">
             <input
@@ -60,7 +58,7 @@ export class ModalPassword extends LitElement {
               @click=${this.onSubmit}
               class="bg-google-blue hover:bg-google-blueHover grow rounded-xl py-2.5 text-xs font-bold text-white transition"
             >
-              인증 및 접속
+              접속하기
             </button>
           </div>
         </div>

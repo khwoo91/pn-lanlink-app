@@ -45,10 +45,6 @@ export class LlViewer extends LitElement {
   @property({ type: String }) activeRoomName = "";
   @property({ type: String }) activeRoomIp = "";
   @property({ type: Boolean }) localMuted = true;
-  @property({ type: Boolean }) annotationVisible = false;
-  @property({ type: Boolean }) cursorVisible = false;
-  @property({ type: Number }) cursorX = 33;
-  @property({ type: Number }) cursorY = 50;
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
@@ -57,8 +53,6 @@ export class LlViewer extends LitElement {
   @property({ attribute: false }) stream: MediaStream | null = null;
 
   render() {
-    const isChulsoo = this.activeRoomName.includes("김철수");
-
     return html`
       <div
         id="active-viewer-container"
@@ -76,25 +70,7 @@ export class LlViewer extends LitElement {
               >
             </h3>
           </div>
-          <div class="flex w-full items-center justify-between gap-2 text-xs sm:w-auto sm:justify-end">
-            <div class="flex items-center gap-1">
-              <span
-                id="badge-control"
-                class="${isChulsoo
-                  ? ""
-                  : "hidden"} bg-google-blue/10 text-google-blue border-google-blue/20 rounded border px-2 py-0.5 text-[10px] font-semibold sm:text-xs"
-              >
-                <i data-lucide="mouse-pointer" class="mr-0.5 inline h-3 w-3"></i> 제어
-              </span>
-              <span
-                id="badge-draw"
-                class="${isChulsoo
-                  ? ""
-                  : "hidden"} rounded border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 sm:text-xs"
-              >
-                <i data-lucide="pen-tool" class="mr-0.5 inline h-3 w-3"></i> 필기
-              </span>
-            </div>
+          <div class="flex w-full items-center justify-end gap-2 text-xs sm:w-auto">
             <button
               @click=${this.onLeaveSession}
               class="shrink-0 text-xs font-semibold text-rose-600 transition hover:text-rose-400 sm:text-sm"
@@ -137,17 +113,6 @@ export class LlViewer extends LitElement {
                       </div>
                     </div>
                   `}
-
-              <!-- Remote cursor marker -->
-              <div
-                id="cursor-indicator"
-                class="${this.cursorVisible
-                  ? ""
-                  : "hidden"} bg-google-blue pointer-events-none absolute z-20 flex items-center gap-1.5 rounded-md border border-blue-400 px-2 py-1 text-xs text-white shadow-lg select-none"
-                style="top: ${this.cursorY}%; left: ${this.cursorX}%;"
-              >
-                <i data-lucide="pointer" class="h-3.5 w-3.5 text-white"></i> 제어자 커서 (조종 중)
-              </div>
 
               <!-- Latency Badge overlay -->
               <div
@@ -196,34 +161,6 @@ export class LlViewer extends LitElement {
                     : html`<i data-lucide="mic" class="h-5 w-5"></i>`}
                 </button>
 
-                <!-- Virtual Remote Click -->
-                ${isChulsoo
-                  ? html`
-                      <button
-                        @click=${this.onSimulateClick}
-                        class="text-google-blue flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-800/80 transition-colors hover:bg-slate-700"
-                        title="가상 원격 클릭"
-                      >
-                        <i data-lucide="mouse-pointer-click" class="h-5 w-5"></i>
-                      </button>
-                    `
-                  : ""}
-
-                <!-- Pen Feedback Toggle -->
-                ${isChulsoo
-                  ? html`
-                      <button
-                        @click=${this.onToggleDraw}
-                        class="${this.annotationVisible
-                          ? "border-amber-500/30 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
-                          : "border-slate-700/50 bg-slate-800/80 text-amber-500 hover:bg-slate-700"} flex h-10 w-10 items-center justify-center rounded-xl border transition-colors"
-                        title="펜 피드백 토글"
-                      >
-                        <i data-lucide="pencil" class="h-5 w-5"></i>
-                      </button>
-                    `
-                  : ""}
-
                 <!-- Divider line -->
                 <div class="mx-0.5 h-5 w-px bg-slate-700/50"></div>
 
@@ -269,14 +206,6 @@ export class LlViewer extends LitElement {
 
   private onToggleMute() {
     this.dispatchEvent(new CustomEvent("toggle-mute", { bubbles: true, composed: true }));
-  }
-
-  private onSimulateClick() {
-    this.dispatchEvent(new CustomEvent("simulate-click", { bubbles: true, composed: true }));
-  }
-
-  private onToggleDraw() {
-    this.dispatchEvent(new CustomEvent("toggle-draw", { bubbles: true, composed: true }));
   }
 
   private onLeaveSession() {
