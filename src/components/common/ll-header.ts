@@ -54,7 +54,7 @@ export class LlHeader extends LitElement {
               <span class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">LANLink</span>
               <span
                 class="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800"
-                >v1.2.4</span
+                >v1.2.5</span
               >
               <span class="hidden text-[11px] font-medium text-slate-500 sm:inline">다이렉트 화면공유 및 제어</span>
             </div>
@@ -63,7 +63,7 @@ export class LlHeader extends LitElement {
           <!-- Actions -->
           <div class="flex items-center space-x-2 md:space-x-3">
             <!-- LAN state -->
-            <div class="flex items-center space-x-1.5 text-[13px] transition-colors shrink-0">
+            <div class="flex shrink-0 items-center space-x-1.5 text-[13px] transition-colors">
               <span class="relative flex h-2 w-2">
                 ${this.isSignalingConnected
                   ? html`
@@ -131,7 +131,7 @@ export class LlHeader extends LitElement {
 
             <!-- Nickname -->
             <div
-              class="flex items-center space-x-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs transition-colors dark:border-slate-700 dark:bg-slate-800 shrink-0"
+              class="flex shrink-0 items-center space-x-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs transition-colors dark:border-slate-700 dark:bg-slate-800"
             >
               <div class="bg-google-blue/10 text-google-blue flex h-4 w-4 items-center justify-center rounded-full">
                 <i data-lucide="user" class="h-3.5 w-3.5"></i>
