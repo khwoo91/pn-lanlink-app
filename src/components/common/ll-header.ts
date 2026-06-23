@@ -53,8 +53,8 @@ export class LlHeader extends LitElement {
             <div class="flex items-baseline space-x-2">
               <span class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">LANLink</span>
               <span
-                class="hidden rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 sm:inline"
-                >v1.2.8</span
+                class="hidden rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 sm:inline dark:border-slate-700 dark:bg-slate-800"
+                >v1.2.9</span
               >
               <span class="hidden text-[11px] font-medium text-slate-500 sm:inline">다이렉트 화면공유 및 제어</span>
             </div>
@@ -77,7 +77,7 @@ export class LlHeader extends LitElement {
               <span
                 class="${this.isSignalingConnected
                   ? "text-slate-600 dark:text-slate-300"
-                  : "text-rose-500 dark:text-rose-400"} font-medium whitespace-nowrap hidden sm:inline"
+                  : "text-rose-500 dark:text-rose-400"} hidden font-medium whitespace-nowrap sm:inline"
               >
                 ${this.isSignalingConnected ? "연결중" : "연결 실패"}
               </span>
@@ -137,7 +137,7 @@ export class LlHeader extends LitElement {
                 <i data-lucide="user" class="h-3.5 w-3.5"></i>
               </div>
               <span class="hidden text-slate-500 sm:inline dark:text-slate-400">닉네임:</span>
-              <strong class="inline-block max-w-14 truncate font-bold text-slate-800 dark:text-slate-200 sm:max-w-28"
+              <strong class="inline-block max-w-14 truncate font-bold text-slate-800 sm:max-w-28 dark:text-slate-200"
                 >${this.currentNickname}</strong
               >
               <button
