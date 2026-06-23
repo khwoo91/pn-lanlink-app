@@ -15,10 +15,15 @@ const wss = new WebSocketServer({ server });
 
 const activeRooms = new Map(); // ip -> room
 
-// 공인 IP 매칭에 따른 대기방 목록 필터링 전송 (데모/테스트 편의성을 위해 필터링을 비활성화하고 전체 목록 전송)
 function sendFilteredRoomList(ws) {
   const rooms = Array.from(activeRooms.values());
-  const filtered = rooms; // 전체 목록 반환
+  const filtered = rooms.filter(room => {
+    // 1. 호스트의 공인 IP와 뷰어의 공인 IP가 일치하는 경우
+    // 2. 로컬호스트 개발 테스트 편의를 위해 루프백 주소인 경우 필터링 예외 허용
+    return room.publicIp === ws.clientPublicIp || 
+           ws.clientPublicIp === '127.0.0.1' || 
+           room.publicIp === '127.0.0.1';
+  });
 
   ws.send(JSON.stringify({
     type: 'room-list-response',
@@ -85,7 +90,7 @@ wss.on('connection', (ws, req) => {
       }
       else {
         // WebRTC 시그널링 교환 패킷 중계
-        broadcast(msg);
+        broadcast(msg, ws);
       }
     } catch (e) {
       console.error('Error handling WebSocket message in server:', e);
@@ -101,11 +106,18 @@ wss.on('connection', (ws, req) => {
 });
 
 // 시그널링 교환용 기본 브로드캐스트
-function broadcast(data) {
+function broadcast(data, senderWs) {
   const str = JSON.stringify(data);
+  const senderIp = senderWs ? senderWs.clientPublicIp : null;
   for (const client of wss.clients) {
     if (client.readyState === 1) { // OPEN
-      client.send(str);
+      // 송신측과 수신측의 공인 IP가 같거나, 어느 한쪽이 127.0.0.1인 경우에만 릴레이
+      if (!senderIp || 
+          client.clientPublicIp === senderIp || 
+          senderIp === '127.0.0.1' || 
+          client.clientPublicIp === '127.0.0.1') {
+        client.send(str);
+      }
     }
   }
 }

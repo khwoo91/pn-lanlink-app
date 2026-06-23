@@ -296,19 +296,16 @@ export class MyElement extends LitElement {
 
           if (this.pendingRoomJoinCode) {
             const code = this.pendingRoomJoinCode;
-            const fallbackIp = this.pendingRoomJoinIp;
 
             const foundRoom = this.scannedRooms.find((r) => r.code === code || r.ip === code || r.name.includes(code));
             if (foundRoom) {
               this.checkPasswordAndJoin(foundRoom.name, foundRoom.ip, foundRoom.locked, foundRoom.passwordHash);
             } else {
-              // 룸 목록에서 정확히 찾지 못했을 경우 링크에 동봉된 ipParam 주소를 우선 탑재하여 조인
-              const targetIp =
-                fallbackIp ||
-                (code === window.location.hostname || code === this.serverDetectedIp
-                  ? this.serverDetectedIp || window.location.hostname
-                  : code);
-              this.checkPasswordAndJoin(`공유방 (${code})`, targetIp, false);
+              // 동일 사내망(WiFi/LAN)이 아니거나 존재하지 않는 방인 경우 다이렉트 조인 차단 및 홈 리다이렉트
+              this.pendingRoomJoinCode = "";
+              this.pendingRoomJoinIp = "";
+              this.showToast("⚠️ 동일한 와이파이(LAN)에 연결되어 있지 않거나 존재하지 않는 방입니다.");
+              this.clearUrlParams();
             }
           }
           return;
@@ -390,12 +387,15 @@ export class MyElement extends LitElement {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        this.sendSignalingMessage({
-          type: "candidate",
-          from: "host",
-          to: viewerId,
-          candidate: event.candidate,
-        });
+        // Enforce LAN connection: Only send candidate if it is 'typ host' (local LAN IP)
+        if (event.candidate.candidate.includes("typ host")) {
+          this.sendSignalingMessage({
+            type: "candidate",
+            from: "host",
+            to: viewerId,
+            candidate: event.candidate,
+          });
+        }
       }
     };
 
@@ -441,12 +441,15 @@ export class MyElement extends LitElement {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        this.sendSignalingMessage({
-          type: "candidate",
-          from: this.viewerId,
-          to: "host",
-          candidate: event.candidate,
-        });
+        // Enforce LAN connection: Only send candidate if it is 'typ host' (local LAN IP)
+        if (event.candidate.candidate.includes("typ host")) {
+          this.sendSignalingMessage({
+            type: "candidate",
+            from: this.viewerId,
+            to: "host",
+            candidate: event.candidate,
+          });
+        }
       }
     };
 
@@ -834,6 +837,16 @@ export class MyElement extends LitElement {
       const debugMsg = `비밀번호가 일치하지 않습니다.\n(입력: ${enteredHash.slice(0, 8)}... / 대상: ${targetHash ? targetHash.slice(0, 8) + '...' : '없음'})`;
       this.showToast(debugMsg);
     }
+  }
+
+  private clearUrlParams() {
+    window.history.replaceState({}, "", window.location.pathname);
+  }
+
+  private onCancelPasswordModal() {
+    this.passwordVerifyModalOpen = false;
+    this.currentScreen = "landing";
+    this.clearUrlParams();
   }
 
   private async joinRoomDirectly() {
@@ -1341,7 +1354,7 @@ export class MyElement extends LitElement {
 
       <modal-password
         .open=${this.passwordVerifyModalOpen}
-        @close-modal=${() => (this.passwordVerifyModalOpen = false)}
+        @close-modal=${this.onCancelPasswordModal}
         @submit-verify-password=${this.onSubmitVerifyPassword}
       ></modal-password>
 
