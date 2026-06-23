@@ -79,6 +79,7 @@ export class LlMdnsList extends LitElement {
         detail: {
           name: room.name,
           ip: room.ip,
+          code: room.code,
           locked: room.locked,
           passwordHash: room.passwordHash,
         },

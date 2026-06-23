@@ -780,7 +780,8 @@ export class MyElement extends LitElement {
     }
   }
 
-  private onSelectRoom(e: CustomEvent<{ name: string; ip: string; locked: boolean; passwordHash?: string }>) {
+  private onSelectRoom(e: CustomEvent<{ name: string; ip: string; locked: boolean; code: string; passwordHash?: string }>) {
+    this.pendingRoomJoinCode = e.detail.code;
     this.checkPasswordAndJoin(e.detail.name, e.detail.ip, e.detail.locked, e.detail.passwordHash);
   }
 
@@ -789,6 +790,12 @@ export class MyElement extends LitElement {
     this.tempJoinName = name;
     this.tempJoinIp = ip;
     this.targetRoomPasswordHash = passwordHash || "";
+
+    if (this.pendingRoomJoinCode) {
+      this.activeRoomCode = this.pendingRoomJoinCode;
+      this.pendingRoomJoinCode = "";
+      this.pendingRoomJoinIp = "";
+    }
 
     if (isLocked) {
       this.passwordVerifyModalOpen = true;
@@ -1098,7 +1105,6 @@ export class MyElement extends LitElement {
                 <ll-hero
                   .hostSetupOpen=${this.hostSetupOpen}
                   .isRoomLocked=${this.isRoomLocked}
-                  .hostPassword=${""}
                   @toggle-drawer=${this.toggleHostSetupDrawer}
                   @toggle-lock=${this.onToggleLock}
                   @start-sharing=${this.onStartSharing}
