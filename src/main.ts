@@ -806,10 +806,13 @@ export class MyElement extends LitElement {
 
   private onSubmitVerifyPassword(e: CustomEvent<{ password: string }>) {
     const entered = e.detail.password;
+    const enteredHash = hashPassword(entered);
+    const targetHash = this.targetRoomPasswordHash;
+
     console.log("[LANLink debug] onSubmitVerifyPassword:", {
       entered,
       targetRoomPasswordHash: this.targetRoomPasswordHash,
-      enteredHash: hashPassword(entered),
+      enteredHash,
       isMatched: verifyPassword(entered, this.targetRoomPasswordHash)
     });
 
@@ -819,7 +822,8 @@ export class MyElement extends LitElement {
       this.joinRoomDirectly();
       this.showToast(`[${this.tempJoinName}] 님의 공유방에 성공적으로 참여하였습니다.`);
     } else {
-      this.showToast("비밀번호가 일치하지 않습니다.");
+      const debugMsg = `비밀번호가 일치하지 않습니다.\n(입력: ${enteredHash.slice(0, 8)}... / 대상: ${targetHash ? targetHash.slice(0, 8) + '...' : '없음'})`;
+      this.showToast(debugMsg);
     }
   }
 
