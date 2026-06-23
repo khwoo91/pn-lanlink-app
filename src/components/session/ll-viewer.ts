@@ -63,7 +63,7 @@ export class LlViewer extends LitElement {
     return html`
       <div
         id="active-viewer-container"
-        class="animate-in zoom-in-95 mx-auto w-full max-w-7xl space-y-4 rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-xl duration-200 dark:border-slate-800 dark:bg-slate-900"
+        class="animate-in zoom-in-95 mx-auto w-full max-w-7xl space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-xl duration-200 sm:p-6 dark:border-slate-800 dark:bg-slate-900"
       >
         <div
           class="flex flex-col justify-between gap-3 border-b border-slate-200 pb-3 sm:flex-row sm:items-center dark:border-slate-800"
@@ -71,7 +71,7 @@ export class LlViewer extends LitElement {
           <div class="flex items-center gap-2">
             <span class="flex h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-emerald-500"></span>
             <h3 class="text-xs leading-snug font-bold text-slate-800 sm:text-sm dark:text-white">
-              <span id="target-host-name">${this.activeRoomName}</span> 님의 로컬 영상 및 음성 수신 중
+              <span id="target-host-name">${this.activeRoomName}</span>님의 화면을 공유하고 있습니다.
               <span class="block text-[10px] text-slate-500 sm:inline sm:text-xs dark:text-slate-400"
                 >(${this.activeRoomIp})</span
               >
@@ -98,13 +98,7 @@ export class LlViewer extends LitElement {
             >
               <!-- Video Stream player (Shows when stream is available) -->
               ${this.stream
-                ? html`
-                    <video
-                      class="absolute inset-0 z-0 h-full w-full object-contain"
-                      autoplay
-                      playsinline
-                    ></video>
-                  `
+                ? html` <video class="absolute inset-0 z-0 h-full w-full object-contain" autoplay playsinline></video> `
                 : html`
                     <!-- Pulsing grey skeleton overlay when connecting -->
                     <div class="absolute inset-0 z-0 flex flex-col justify-between">
@@ -151,7 +145,7 @@ export class LlViewer extends LitElement {
 
               <!-- Floating control overlay bar -->
               <div
-                class="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-2xl border border-slate-700/50 bg-slate-900/85 p-2 shadow-lg backdrop-blur transition-all duration-300 pointer-events-auto opacity-100 translate-y-0 md:pointer-events-none md:translate-y-20 md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:translate-y-0 md:group-hover:opacity-100"
+                class="pointer-events-auto absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 translate-y-0 items-center gap-2 rounded-2xl border border-slate-700/50 bg-slate-900/85 p-2 opacity-100 shadow-lg backdrop-blur transition-all duration-300 md:pointer-events-none md:translate-y-20 md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:translate-y-0 md:group-hover:opacity-100"
               >
                 <!-- Mute / Unmute -->
                 <button
