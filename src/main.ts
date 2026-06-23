@@ -676,11 +676,11 @@ export class MyElement extends LitElement {
   }
 
   private async onStartSharing(e: CustomEvent<{ password: string }>) {
-    console.log("[LANLink debug] onStartSharing:", {
-      password: e.detail.password,
-      isRoomLocked: this.isRoomLocked,
-      hashGenerated: hashPassword(e.detail.password || ""),
-    });
+    // console.log("[LANLink debug] onStartSharing:", {
+    //   password: e.detail.password,
+    //   isRoomLocked: this.isRoomLocked,
+    //   hashGenerated: hashPassword(e.detail.password || ""),
+    // });
     if (this.isRoomLocked && (!e.detail.password || e.detail.password.trim() === "")) {
       this.openAlertModal("비밀번호를 설정해주세요.");
       return;
@@ -795,7 +795,7 @@ export class MyElement extends LitElement {
       },
     });
 
-    this.showToast("🚀 이전 화면 공유 세션이 성공적으로 복원되었습니다!");
+    this.showToast("🚀 이전 화면 공유방이 성공적으로 재연결되었습니다!");
   }
 
   private clearSavedHostSession() {
@@ -804,7 +804,7 @@ export class MyElement extends LitElement {
     localStorage.removeItem("my_created_room_password_hash");
     this.hasSavedHostSession = false;
     this.savedHostRoomCode = "";
-    this.showToast("🗑️ 이전 세션 정보가 삭제되었습니다.");
+    this.showToast("🗑️ 이전 화면공유방이 삭제되었습니다.");
   }
 
   private async changeSharedScreen() {
@@ -863,7 +863,7 @@ export class MyElement extends LitElement {
       this.pendingRoomJoinCode = code;
       const params = new URLSearchParams(window.location.search);
       const ipParam = params.get("ip") || window.location.hostname;
-      this.checkPasswordAndJoin(`공유 회의방 (${code})`, ipParam, false);
+      this.checkPasswordAndJoin(`화면 공유방 (${code})`, ipParam, false);
     }
   }
 
@@ -896,7 +896,7 @@ export class MyElement extends LitElement {
   private onSubmitVerifyPassword(e: CustomEvent<{ password: string }>) {
     const entered = e.detail.password;
     const enteredHash = hashPassword(entered);
-    const targetHash = this.targetRoomPasswordHash;
+    // const targetHash = this.targetRoomPasswordHash;
 
     console.log("[LANLink debug] onSubmitVerifyPassword:", {
       entered,
@@ -911,8 +911,7 @@ export class MyElement extends LitElement {
       this.joinRoomDirectly();
       this.showToast(`[${this.tempJoinName}] 님의 공유방에 성공적으로 참여하였습니다.`);
     } else {
-      const debugMsg = `비밀번호가 일치하지 않습니다.\n(입력: ${enteredHash.slice(0, 8)}... / 대상: ${targetHash ? targetHash.slice(0, 8) + "..." : "없음"})`;
-      this.showToast(debugMsg);
+      this.showToast(`비밀번호가 일치하지 않습니다.`);
     }
   }
 
@@ -988,7 +987,7 @@ export class MyElement extends LitElement {
       this.pendingRoomJoinIp = "";
     }, 500);
 
-    this.showToast(`⚡ ${this.activeRoomName} 님에게 화면공유 연결 시도 중...`);
+    this.showToast(`⚡ ${this.activeRoomName} 님에게 연결 시도 중...`);
   }
 
   private leaveSession() {
