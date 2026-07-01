@@ -6,6 +6,7 @@ import { globalIcons } from "../../utils/icons";
 @customElement("ll-viewer")
 export class LlViewer extends LitElement {
   @state() private isFullScreen = false;
+  @state() private chatCollapsed = false;
 
   connectedCallback() {
     super.connectedCallback();
@@ -19,6 +20,9 @@ export class LlViewer extends LitElement {
 
   private onFullScreenChange = () => {
     this.isFullScreen = !!document.fullscreenElement;
+    if (!this.isFullScreen) {
+      this.chatCollapsed = false;
+    }
   };
 
   firstUpdated() {
@@ -40,7 +44,8 @@ export class LlViewer extends LitElement {
     if (
       changedProperties.has("localMuted") ||
       changedProperties.has("isFullScreen") ||
-      changedProperties.has("speakerMuted")
+      changedProperties.has("speakerMuted") ||
+      changedProperties.has("chatCollapsed")
     ) {
       createIcons({
         icons: globalIcons,
@@ -203,6 +208,21 @@ export class LlViewer extends LitElement {
                 <!-- Divider line -->
                 <div class="mx-0.5 h-5 w-px bg-slate-700/50"></div>
 
+                <!-- Chat Collapse Toggle (Only visible in fullscreen) -->
+                ${this.isFullScreen
+                  ? html`
+                      <button
+                        @click=${this.toggleChatCollapse}
+                        class="${this.chatCollapsed
+                          ? "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
+                          : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"} flex h-10 w-10 items-center justify-center rounded-xl border border-transparent transition-colors"
+                        title="${this.chatCollapsed ? "채팅창 열기" : "채팅창 접기"}"
+                      >
+                        <i data-lucide="messages-square" class="h-5 w-5"></i>
+                      </button>
+                    `
+                  : ""}
+
                 <!-- Fullscreen Toggle -->
                 <button
                   @click=${this.toggleFullScreen}
@@ -225,7 +245,9 @@ export class LlViewer extends LitElement {
             .participants=${this.participants}
             .myNickname=${this.myNickname}
             @send-message=${this.onForwardSendMessage}
-            class="${this.isFullScreen ? "absolute right-6 top-6 z-20 w-96 max-h-[80vh] h-fit overflow-hidden rounded-3xl shadow-2xl" : "block w-full xl:col-span-4"}"
+            class="${this.isFullScreen
+              ? `absolute right-6 top-6 bottom-6 z-20 w-96 h-[calc(100vh-3rem)] max-h-[calc(100vh-3rem)] overflow-hidden rounded-3xl shadow-2xl transition-all duration-300 ${this.chatCollapsed ? "opacity-0 pointer-events-none translate-x-16" : "opacity-100"}`
+              : "block w-full xl:col-span-4"}"
           ></ll-chat>
         </div>
       </div>
@@ -242,6 +264,10 @@ export class LlViewer extends LitElement {
     } else {
       document.exitFullscreen();
     }
+  }
+
+  private toggleChatCollapse() {
+    this.chatCollapsed = !this.chatCollapsed;
   }
 
   private toggleSpeakerMute() {
