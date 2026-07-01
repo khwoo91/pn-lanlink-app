@@ -37,6 +37,8 @@ import {
   MonitorOff,
   RefreshCw,
   Play,
+  Volume2,
+  VolumeX,
 } from "lucide";
 
 export const globalIcons = {
@@ -78,4 +80,6 @@ export const globalIcons = {
   MonitorOff,
   RefreshCw,
   Play,
+  Volume2,
+  VolumeX,
 };

@@ -15,6 +15,7 @@ export class LlChat extends LitElement {
     return this;
   }
 
+  @property({ type: Boolean }) isFullScreen = false;
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
@@ -25,7 +26,7 @@ export class LlChat extends LitElement {
   render() {
     return html`
       <div
-        class="flex h-auto max-h-115 w-full flex-col rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
+        class="flex w-full flex-col rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 ${this.isFullScreen ? 'h-full max-h-full' : 'h-auto max-h-115'}"
       >
         <!-- Chat header -->
         <div class="flex flex-col gap-1.5 border-b border-slate-200 p-3 dark:border-slate-800">
@@ -59,7 +60,7 @@ export class LlChat extends LitElement {
         <!-- Logs list -->
         <div
           id="chat-messages-box"
-          class="custom-scrollbar max-h-87.5 min-h-62.5 grow space-y-3 overflow-y-auto p-3 text-xs"
+          class="custom-scrollbar grow space-y-3 overflow-y-auto p-3 text-xs ${this.isFullScreen ? 'flex-1 min-h-0' : 'max-h-87.5 min-h-62.5'}"
         >
           ${this.chatMessages.map((msg) => {
             if (msg.system) {

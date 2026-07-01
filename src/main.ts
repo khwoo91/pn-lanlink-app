@@ -483,6 +483,17 @@ export class MyElement extends LitElement {
       if (event.streams && event.streams[0]) {
         this.activeStream = event.streams[0];
       }
+      if (event.track.kind === "audio") {
+        const remoteStream = event.streams[0] || new MediaStream([event.track]);
+        document.querySelectorAll("#viewer-received-audio").forEach((el) => el.remove());
+        const audio = document.createElement("audio");
+        audio.srcObject = remoteStream;
+        audio.autoplay = true;
+        audio.style.display = "none";
+        audio.id = "viewer-received-audio";
+        audio.muted = this.speakerMuted;
+        document.body.appendChild(audio);
+      }
     };
 
     pc.ondatachannel = (event) => {
@@ -1070,6 +1081,9 @@ export class MyElement extends LitElement {
     document.querySelectorAll("audio[data-viewer-id]").forEach((el) => {
       (el as HTMLAudioElement).muted = this.speakerMuted;
     });
+    document.querySelectorAll("#viewer-received-audio").forEach((el) => {
+      (el as HTMLAudioElement).muted = this.speakerMuted;
+    });
     this.showToast(this.speakerMuted ? "사운드 출력이 음소거되었습니다." : "사운드 출력이 켜졌습니다.");
   }
 
@@ -1183,6 +1197,7 @@ export class MyElement extends LitElement {
     stopMediaStream(this.micStream);
     this.screenStream = null;
     this.micStream = null;
+    document.querySelectorAll("#viewer-received-audio").forEach((el) => el.remove());
   }
 
   private copyToClipboard(text: string) {
@@ -1493,12 +1508,14 @@ export class MyElement extends LitElement {
                 .activeRoomName=${this.activeRoomName}
                 .activeRoomIp=${this.activeRoomIp}
                 .localMuted=${this.localMuted}
+                .speakerMuted=${this.speakerMuted}
                 .chatMessages=${this.chatMessages}
                 .viewerCount=${this.viewerCount}
                 .participants=${this.activeParticipants}
                 .stream=${this.activeStream}
                 .myNickname=${this.currentNickname}
                 @toggle-mute=${this.toggleLocalMute}
+                @toggle-speaker=${this.toggleSpeakerMute}
                 @leave-session=${this.leaveSession}
                 @send-message=${this.onSendMessage}
                 @show-toast=${(e: CustomEvent<{ message: string }>) => this.showToast(e.detail.message)}

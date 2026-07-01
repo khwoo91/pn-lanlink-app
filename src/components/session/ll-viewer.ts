@@ -6,7 +6,6 @@ import { globalIcons } from "../../utils/icons";
 @customElement("ll-viewer")
 export class LlViewer extends LitElement {
   @state() private isFullScreen = false;
-  @state() private speakerMuted = false;
 
   connectedCallback() {
     super.connectedCallback();
@@ -57,6 +56,7 @@ export class LlViewer extends LitElement {
   @property({ type: String }) activeRoomName = "";
   @property({ type: String }) activeRoomIp = "";
   @property({ type: Boolean }) localMuted = true;
+  @property({ type: Boolean }) speakerMuted = false;
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
@@ -204,6 +204,7 @@ export class LlViewer extends LitElement {
 
           <!-- Render chat sidebar directly to support Light DOM layout -->
           <ll-chat
+            .isFullScreen=${this.isFullScreen}
             .chatMessages=${this.chatMessages}
             .viewerCount=${this.viewerCount}
             .participants=${this.participants}
@@ -229,10 +230,8 @@ export class LlViewer extends LitElement {
   }
 
   private toggleSpeakerMute() {
-    this.speakerMuted = !this.speakerMuted;
     this.dispatchEvent(
-      new CustomEvent("show-toast", {
-        detail: { message: this.speakerMuted ? "사운드 출력이 음소거되었습니다." : "사운드 출력이 켜졌습니다." },
+      new CustomEvent("toggle-speaker", {
         bubbles: true,
         composed: true,
       })
