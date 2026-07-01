@@ -101,11 +101,11 @@ export class LlViewer extends LitElement {
         <div
           id="fullscreen-wrapper"
           class="${this.isFullScreen
-            ? "fixed inset-0 z-50 h-screen w-screen bg-slate-950 animate-in fade-in duration-200"
+            ? "fixed inset-0 z-50 h-screen w-screen bg-slate-950 flex items-center overflow-hidden animate-in fade-in duration-200"
             : "grid grid-cols-1 gap-4 xl:grid-cols-12"}"
         >
           <!-- Left: 16:9 Screen Capturer Screen (8/12) -->
-          <div class="${this.isFullScreen ? "absolute inset-0 w-full h-full z-10" : "flex flex-col space-y-4 xl:col-span-8"}">
+          <div class="${this.isFullScreen ? `relative h-full transition-all duration-300 ${this.chatCollapsed ? "w-full" : "w-[calc(100%-26rem)]"}` : "flex flex-col space-y-4 xl:col-span-8"}">
             <div
               id="video-wrapper"
               class="dark:bg-slate-955 group ${this.isFullScreen
