@@ -19,10 +19,7 @@ function sendFilteredRoomList(ws) {
   const rooms = Array.from(activeRooms.values());
   const filtered = rooms.filter(room => {
     // 1. 호스트의 공인 IP와 뷰어의 공인 IP가 일치하는 경우
-    // 2. 로컬호스트 개발 테스트 편의를 위해 루프백 주소인 경우 필터링 예외 허용
-    return room.publicIp === ws.clientPublicIp || 
-           ws.clientPublicIp === '127.0.0.1' || 
-           room.publicIp === '127.0.0.1';
+    return room.publicIp === ws.clientPublicIp;
   });
 
   ws.send(JSON.stringify({

@@ -46,7 +46,9 @@ export class MyElement extends LitElement {
       changedProperties.has("proModalOpen") ||
       changedProperties.has("toastVisible") ||
       changedProperties.has("alertModalOpen") ||
-      changedProperties.has("hasSavedHostSession")
+      changedProperties.has("hasSavedHostSession") ||
+      changedProperties.has("localMuted") ||
+      changedProperties.has("speakerMuted")
     ) {
       createIcons({
         icons: globalIcons,
@@ -71,6 +73,7 @@ export class MyElement extends LitElement {
   @state() private carouselIndex: number = 0;
   @state() private viewerCount: number = 0;
   @state() private localMuted: boolean = true;
+  @state() private speakerMuted: boolean = false;
   @state() private scannedRooms: LANRoom[] = [];
   @state() private serverDetectedIp: string = "";
   @state() private pendingRoomJoinCode: string = "";
@@ -395,7 +398,13 @@ export class MyElement extends LitElement {
       });
     }
 
-    pc.addTransceiver("audio", { direction: "sendrecv" });
+    const audioTransceiver = pc.addTransceiver("audio", { direction: "sendrecv" });
+    if (this.micStream && !this.localMuted) {
+      const micTrack = this.micStream.getAudioTracks()[0];
+      if (micTrack) {
+        audioTransceiver.sender.replaceTrack(micTrack);
+      }
+    }
 
     const dc = pc.createDataChannel("chat");
     this.hostDataChannels.set(viewerId, dc);
@@ -423,6 +432,7 @@ export class MyElement extends LitElement {
         audio.autoplay = true;
         audio.style.display = "none";
         audio.dataset.viewerId = viewerId;
+        audio.muted = this.speakerMuted;
         document.body.appendChild(audio);
       }
     };
@@ -1020,30 +1030,47 @@ export class MyElement extends LitElement {
   private async toggleLocalMute() {
     this.localMuted = !this.localMuted;
 
+    if (!this.localMuted) {
+      this.micStream = await captureMicrophone();
+    } else {
+      if (this.micStream) {
+        stopMediaStream(this.micStream);
+        this.micStream = null;
+      }
+    }
+
     if (this.currentScreen === "viewer") {
       const audioTransceiver = this.viewerConnection
         ?.getTransceivers()
         .find((t) => t.receiver.track && t.receiver.track.kind === "audio");
       const sender = audioTransceiver?.sender;
-
-      if (!this.localMuted) {
-        this.micStream = await captureMicrophone();
-        if (this.micStream && sender) {
-          sender.replaceTrack(this.micStream.getAudioTracks()[0]);
-        }
-      } else {
+      if (sender) {
+        await sender.replaceTrack(this.micStream ? this.micStream.getAudioTracks()[0] : null);
+      }
+    } else if (this.currentScreen === "host") {
+      const track = this.micStream ? this.micStream.getAudioTracks()[0] : null;
+      for (const pc of this.hostConnections.values()) {
+        const audioTransceiver = pc
+          .getTransceivers()
+          .find((t) => t.receiver.track && t.receiver.track.kind === "audio");
+        const sender = audioTransceiver?.sender;
         if (sender) {
-          sender.replaceTrack(null);
-        }
-        if (this.micStream) {
-          stopMediaStream(this.micStream);
-          this.micStream = null;
+          await sender.replaceTrack(track);
         }
       }
     }
 
     setStreamAudioEnabled(this.micStream, !this.localMuted);
     this.showToast(this.localMuted ? "마이크가 음소거되었습니다." : "마이크가 켜졌습니다.");
+  }
+
+  // --- Speaker Mute Toggle ---
+  private toggleSpeakerMute() {
+    this.speakerMuted = !this.speakerMuted;
+    document.querySelectorAll("audio[data-viewer-id]").forEach((el) => {
+      (el as HTMLAudioElement).muted = this.speakerMuted;
+    });
+    this.showToast(this.speakerMuted ? "사운드 출력이 음소거되었습니다." : "사운드 출력이 켜졌습니다.");
   }
 
   // --- Real-time Local Chat ---
@@ -1397,8 +1424,35 @@ export class MyElement extends LitElement {
                     </div>
 
                     <div class="mt-6 flex flex-col gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-                      <!-- Action buttons: Change Share Screen / Stop sharing -->
+                      <!-- Action buttons: Mic, Speaker, Change Share Screen / Stop sharing -->
                       <div class="flex flex-col gap-2 sm:flex-row">
+                        <!-- Mic Toggle -->
+                        <button
+                          @click=${this.toggleLocalMute}
+                          class="${this.localMuted
+                            ? "bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/20 dark:text-rose-400"
+                            : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400"} flex grow items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition"
+                          title="${this.localMuted ? "마이크 켜기" : "마이크 끄기"}"
+                        >
+                          ${this.localMuted
+                            ? html`<i data-lucide="mic-off" class="h-4 w-4"></i> 마이크 꺼짐`
+                            : html`<i data-lucide="mic" class="h-4 w-4"></i> 마이크 켜짐`}
+                        </button>
+                        
+                        <!-- Speaker Toggle -->
+                        <button
+                          @click=${this.toggleSpeakerMute}
+                          class="${this.speakerMuted
+                            ? "bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/20 dark:text-rose-400"
+                            : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400"} flex grow items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition"
+                          title="${this.speakerMuted ? "사운드 켜기" : "사운드 끄기"}"
+                        >
+                          ${this.speakerMuted
+                            ? html`<i data-lucide="volume-x" class="h-4 w-4"></i> 사운드 꺼짐`
+                            : html`<i data-lucide="volume-2" class="h-4 w-4"></i> 사운드 켜짐`}
+                        </button>
+                      </div>
+                      <div class="flex flex-col gap-2 sm:flex-row mt-1">
                         <button
                           @click=${this.changeSharedScreen}
                           class="text-google-blue flex grow items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-xs font-bold transition hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400"
@@ -1447,6 +1501,7 @@ export class MyElement extends LitElement {
                 @toggle-mute=${this.toggleLocalMute}
                 @leave-session=${this.leaveSession}
                 @send-message=${this.onSendMessage}
+                @show-toast=${(e: CustomEvent<{ message: string }>) => this.showToast(e.detail.message)}
               >
                 <ll-voice .localMuted=${this.localMuted}></ll-voice>
               </ll-viewer>

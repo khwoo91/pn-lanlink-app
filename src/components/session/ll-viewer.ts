@@ -6,6 +6,7 @@ import { globalIcons } from "../../utils/icons";
 @customElement("ll-viewer")
 export class LlViewer extends LitElement {
   @state() private isFullScreen = false;
+  @state() private speakerMuted = false;
 
   connectedCallback() {
     super.connectedCallback();
@@ -37,7 +38,11 @@ export class LlViewer extends LitElement {
       videoEl.srcObject = this.stream;
     }
 
-    if (changedProperties.has("localMuted") || changedProperties.has("isFullScreen")) {
+    if (
+      changedProperties.has("localMuted") ||
+      changedProperties.has("isFullScreen") ||
+      changedProperties.has("speakerMuted")
+    ) {
       createIcons({
         icons: globalIcons,
         root: this,
@@ -87,18 +92,23 @@ export class LlViewer extends LitElement {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div
+          id="fullscreen-wrapper"
+          class="${this.isFullScreen
+            ? "fixed inset-0 z-50 flex h-screen w-screen gap-4 bg-slate-950 p-6 animate-in fade-in duration-200"
+            : "grid grid-cols-1 gap-4 xl:grid-cols-12"}"
+        >
           <!-- Left: 16:9 Screen Capturer Screen (8/12) -->
-          <div class="flex flex-col space-y-4 xl:col-span-8">
+          <div class="${this.isFullScreen ? "flex-1 h-full min-w-0" : "flex flex-col space-y-4 xl:col-span-8"}">
             <div
               id="video-wrapper"
               class="dark:bg-slate-955 group ${this.isFullScreen
-                ? ""
-                : "rounded-2xl border border-slate-200 dark:border-slate-800"} relative flex aspect-video w-full items-center justify-center overflow-hidden bg-slate-900"
+                ? "h-full w-full rounded-2xl border border-slate-800"
+                : "rounded-2xl border border-slate-200 dark:border-slate-800 aspect-video"} relative flex w-full items-center justify-center overflow-hidden bg-slate-900"
             >
               <!-- Video Stream player (Shows when stream is available) -->
               ${this.stream
-                ? html` <video class="absolute inset-0 z-0 h-full w-full object-contain" autoplay playsinline></video> `
+                ? html` <video class="absolute inset-0 z-0 h-full w-full object-contain" autoplay playsinline ?muted=${this.speakerMuted}></video> `
                 : html`
                     <!-- Pulsing grey skeleton overlay when connecting -->
                     <div class="absolute inset-0 z-0 flex flex-col justify-between">
@@ -122,7 +132,7 @@ export class LlViewer extends LitElement {
                   <span
                     class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
                   ></span>
-                  <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                  <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-50"></span>
                 </span>
                 <span>지연율: 1.2ms</span>
               </div>
@@ -161,6 +171,20 @@ export class LlViewer extends LitElement {
                     : html`<i data-lucide="mic" class="h-5 w-5"></i>`}
                 </button>
 
+                <!-- Speaker Mute / Unmute -->
+                <button
+                  id="btn-speaker-toggle"
+                  @click=${this.toggleSpeakerMute}
+                  class="${this.speakerMuted
+                    ? "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
+                    : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"} flex h-10 w-10 items-center justify-center rounded-xl border border-transparent transition-colors"
+                  title="${this.speakerMuted ? "사운드 켜기" : "사운드 끄기"}"
+                >
+                  ${this.speakerMuted
+                    ? html`<i data-lucide="volume-x" class="h-5 w-5"></i>`
+                    : html`<i data-lucide="volume-2" class="h-5 w-5"></i>`}
+                </button>
+
                 <!-- Divider line -->
                 <div class="mx-0.5 h-5 w-px bg-slate-700/50"></div>
 
@@ -185,7 +209,7 @@ export class LlViewer extends LitElement {
             .participants=${this.participants}
             .myNickname=${this.myNickname}
             @send-message=${this.onForwardSendMessage}
-            class="block w-full xl:col-span-4"
+            class="${this.isFullScreen ? "w-96 shrink-0 h-full flex flex-col" : "block w-full xl:col-span-4"}"
           ></ll-chat>
         </div>
       </div>
@@ -193,7 +217,7 @@ export class LlViewer extends LitElement {
   }
 
   private toggleFullScreen() {
-    const wrapper = this.querySelector("#video-wrapper");
+    const wrapper = this.querySelector("#fullscreen-wrapper");
     if (!wrapper) return;
     if (!document.fullscreenElement) {
       wrapper.requestFullscreen().catch((err) => {
@@ -202,6 +226,17 @@ export class LlViewer extends LitElement {
     } else {
       document.exitFullscreen();
     }
+  }
+
+  private toggleSpeakerMute() {
+    this.speakerMuted = !this.speakerMuted;
+    this.dispatchEvent(
+      new CustomEvent("show-toast", {
+        detail: { message: this.speakerMuted ? "사운드 출력이 음소거되었습니다." : "사운드 출력이 켜졌습니다." },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   private onToggleMute() {
