@@ -141,6 +141,11 @@ export class MyElement extends LitElement {
   @state() protected activeStream: MediaStream | null = null;
   private targetRoomPasswordHash: string = "";
 
+  // PiP 및 Fallback 팝업 상태 보존용
+  private pipWindow: Window | null = null;
+  private pipFallbackWindow: Window | null = null;
+  private originalChatParent: HTMLElement | null = null;
+
   connectedCallback() {
     super.connectedCallback();
 
@@ -1180,6 +1185,200 @@ export class MyElement extends LitElement {
     }, 50);
   }
 
+  // --- PiP (Picture-in-Picture) Chat window handler ---
+  private async handleTogglePiP(e: CustomEvent) {
+    const chatEl = e.target as HTMLElement;
+    if (!chatEl) return;
+
+    // 이미 PiP 창이 열려 있는 상태에서 누르면 닫는다 (토글 기능)
+    if (this.pipWindow) {
+      this.pipWindow.close();
+      return;
+    }
+    if (this.pipFallbackWindow) {
+      this.pipFallbackWindow.close();
+      return;
+    }
+
+    this.originalChatParent = chatEl.parentElement;
+
+    // 스타일시트 복사 함수
+    const copyStyles = (targetDoc: Document) => {
+      // style 태그 복사
+      document.querySelectorAll("style").forEach((style) => {
+        targetDoc.head.appendChild(style.cloneNode(true));
+      });
+      // link rel="stylesheet" 태그 복사
+      document.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+        targetDoc.head.appendChild(link.cloneNode(true));
+      });
+    };
+
+    // 원래 자리에 꽂아넣을 placeholder 생성
+    const placeholder = document.createElement("div");
+    placeholder.id = "chat-pip-placeholder";
+    placeholder.className =
+      "flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 rounded-3xl p-6 text-center text-slate-400 dark:text-slate-500 h-80 w-full select-none transition-colors duration-200";
+    placeholder.innerHTML = `
+      <i data-lucide="external-link" class="mb-2 h-8 w-8 text-slate-400 dark:text-slate-600"></i>
+      <span class="text-xs font-semibold">채팅창이 팝업으로 분리되었습니다.</span>
+      <button class="mt-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer">채팅창 원복하기</button>
+    `;
+    
+    // placeholder 내 버튼 클릭 시 PiP 닫기
+    placeholder.querySelector("button")?.addEventListener("click", () => {
+      if (this.pipWindow) this.pipWindow.close();
+      if (this.pipFallbackWindow) this.pipFallbackWindow.close();
+    });
+
+    const restoreChat = () => {
+      if (placeholder.parentNode) {
+        placeholder.parentNode.replaceChild(chatEl, placeholder);
+      } else if (this.originalChatParent) {
+        this.originalChatParent.appendChild(chatEl);
+      }
+      
+      chatEl.classList.remove("h-full", "w-full");
+      chatEl.removeAttribute("style");
+      
+      // Lucide 아이콘 재생성
+      createIcons({
+        icons: globalIcons,
+        root: chatEl,
+      });
+
+      // 스크롤 아래로
+      const box = chatEl.querySelector("#chat-messages-box") as HTMLElement | null;
+      if (box) {
+        box.scrollTop = box.scrollHeight;
+      }
+
+      this.pipWindow = null;
+      this.pipFallbackWindow = null;
+    };
+
+    // 원래 자리에 placeholder 이식
+    if (this.originalChatParent) {
+      this.originalChatParent.replaceChild(placeholder, chatEl);
+      createIcons({
+        icons: globalIcons,
+        root: placeholder,
+      });
+    }
+
+    // Document Picture-in-Picture API 시도
+    if ((window as any).documentPictureInPicture) {
+      try {
+        const pipWin = await (window as any).documentPictureInPicture.requestWindow({
+          width: 450,
+          height: 600,
+        });
+        this.pipWindow = pipWin;
+
+        const pipDoc = pipWin.document;
+        copyStyles(pipDoc);
+
+        pipDoc.body.style.margin = "0";
+        pipDoc.body.style.height = "100vh";
+        pipDoc.body.style.backgroundColor = document.body.classList.contains("dark") ? "#0f172a" : "#ffffff";
+        if (document.body.classList.contains("dark")) {
+          pipDoc.documentElement.classList.add("dark");
+        }
+
+        // ll-chat 엘리먼트 스타일 부여
+        chatEl.classList.add("h-full", "w-full");
+        chatEl.style.height = "100vh";
+        chatEl.style.display = "flex";
+        chatEl.style.flexDirection = "column";
+        chatEl.style.minHeight = "0";
+        chatEl.style.border = "none";
+        chatEl.style.borderRadius = "0";
+
+        pipDoc.body.appendChild(chatEl);
+
+        createIcons({
+          icons: globalIcons,
+          root: chatEl,
+        });
+
+        // 자동 스크롤
+        const box = chatEl.querySelector("#chat-messages-box") as HTMLElement | null;
+        if (box) {
+          setTimeout(() => {
+            box.scrollTop = box.scrollHeight;
+          }, 100);
+        }
+
+        pipWin.addEventListener("pagehide", () => {
+          restoreChat();
+        });
+        return;
+      } catch (err) {
+        console.error("Document Picture-in-Picture failed, falling back to window.open", err);
+      }
+    }
+
+    // Fallback: window.open 팝업 창
+    try {
+      const fallbackWin = window.open(
+        "",
+        "ChatPiP",
+        "width=450,height=600,menubar=no,status=no,titlebar=no,toolbar=no,location=no"
+      );
+      if (fallbackWin) {
+        this.pipFallbackWindow = fallbackWin;
+
+        const pipDoc = fallbackWin.document;
+        copyStyles(pipDoc);
+
+        pipDoc.body.style.margin = "0";
+        pipDoc.body.style.height = "100vh";
+        pipDoc.body.style.backgroundColor = document.body.classList.contains("dark") ? "#0f172a" : "#ffffff";
+        if (document.body.classList.contains("dark")) {
+          pipDoc.documentElement.classList.add("dark");
+        }
+
+        // ll-chat 엘리먼트 스타일 부여
+        chatEl.classList.add("h-full", "w-full");
+        chatEl.style.height = "100vh";
+        chatEl.style.display = "flex";
+        chatEl.style.flexDirection = "column";
+        chatEl.style.minHeight = "0";
+        chatEl.style.border = "none";
+        chatEl.style.borderRadius = "0";
+
+        pipDoc.body.appendChild(chatEl);
+
+        createIcons({
+          icons: globalIcons,
+          root: chatEl,
+        });
+
+        const box = chatEl.querySelector("#chat-messages-box") as HTMLElement | null;
+        if (box) {
+          setTimeout(() => {
+            box.scrollTop = box.scrollHeight;
+          }, 100);
+        }
+
+        fallbackWin.addEventListener("beforeunload", () => {
+          restoreChat();
+        });
+      } else {
+        this.showToast("⚡ 팝업이 차단되었습니다. 팝업 차단을 해제한 후 다시 시도해주세요.");
+        if (placeholder.parentNode) {
+          placeholder.parentNode.replaceChild(chatEl, placeholder);
+        }
+      }
+    } catch (err) {
+      console.error("window.open fallback failed", err);
+      this.showToast("⚡ 팝업 모드를 열 수 없습니다.");
+      if (placeholder.parentNode) {
+        placeholder.parentNode.replaceChild(chatEl, placeholder);
+      }
+    }
+  }
+
   // --- Idle Safeguard Timer ---
   simulateIdleTrigger() {
     this.idleSafeguardOpen = true;
@@ -1265,6 +1464,15 @@ export class MyElement extends LitElement {
     this.screenStream = null;
     this.micStream = null;
     document.querySelectorAll("#viewer-received-audio").forEach((el) => el.remove());
+
+    if (this.pipWindow) {
+      this.pipWindow.close();
+      this.pipWindow = null;
+    }
+    if (this.pipFallbackWindow) {
+      this.pipFallbackWindow.close();
+      this.pipFallbackWindow = null;
+    }
   }
 
   private copyToClipboard(text: string) {
@@ -1599,11 +1807,13 @@ export class MyElement extends LitElement {
                 <!-- Bottom Section: Chat Room taking full width -->
                 <div class="w-full">
                   <ll-chat
+                    id="host-chat-element"
                     .chatMessages=${this.chatMessages}
                     .viewerCount=${this.viewerCount}
                     .participants=${this.activeParticipants}
                     .myNickname=${this.currentNickname}
                     @send-message=${this.onSendMessage}
+                    @toggle-pip=${this.handleTogglePiP}
                     class="block w-full"
                   ></ll-chat>
                 </div>
@@ -1630,6 +1840,7 @@ export class MyElement extends LitElement {
                 @change-speaker-volume=${this.handleSpeakerVolumeChange}
                 @leave-session=${this.leaveSession}
                 @send-message=${this.onSendMessage}
+                @toggle-pip=${this.handleTogglePiP}
                 @show-toast=${(e: CustomEvent<{ message: string }>) => this.showToast(e.detail.message)}
               >
                 <ll-voice .localMuted=${this.localMuted}></ll-voice>

@@ -239,6 +239,7 @@ export class LlViewer extends LitElement {
 
           <!-- Render chat sidebar directly to support Light DOM layout -->
           <ll-chat
+            id="viewer-chat-element"
             .isFullScreen=${this.isFullScreen}
             .chatMessages=${this.chatMessages}
             .viewerCount=${this.viewerCount}
