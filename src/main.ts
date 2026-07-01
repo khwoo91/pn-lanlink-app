@@ -74,6 +74,8 @@ export class MyElement extends LitElement {
   @state() private viewerCount: number = 0;
   @state() private localMuted: boolean = true;
   @state() private speakerMuted: boolean = false;
+  @state() private micVolume: number = 100;
+  @state() private speakerVolume: number = 100;
   @state() private scannedRooms: LANRoom[] = [];
   @state() private serverDetectedIp: string = "";
   @state() private pendingRoomJoinCode: string = "";
@@ -123,6 +125,10 @@ export class MyElement extends LitElement {
 
   @state() private screenStream: MediaStream | null = null;
   private micStream: MediaStream | null = null;
+  private audioCtx: AudioContext | null = null;
+  private micGainNode: GainNode | null = null;
+  private micSourceNode: MediaStreamAudioSourceNode | null = null;
+  private micDestNode: MediaStreamAudioDestinationNode | null = null;
 
   // WebRTC & Signaling properties
   private websocket: WebSocket | null = null;
@@ -1042,12 +1048,38 @@ export class MyElement extends LitElement {
     this.localMuted = !this.localMuted;
 
     if (!this.localMuted) {
-      this.micStream = await captureMicrophone();
+      const rawStream = await captureMicrophone();
+      if (rawStream) {
+        try {
+          if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          }
+          this.disconnectMicAudioNodes();
+
+          this.micSourceNode = this.audioCtx.createMediaStreamSource(rawStream);
+          this.micGainNode = this.audioCtx.createGain();
+          this.micGainNode.gain.setValueAtTime(this.micVolume / 100, this.audioCtx.currentTime);
+          this.micDestNode = this.audioCtx.createMediaStreamDestination();
+
+          this.micSourceNode.connect(this.micGainNode);
+          this.micGainNode.connect(this.micDestNode);
+
+          this.micStream = this.micDestNode.stream;
+          (this as any).rawMicStream = rawStream;
+        } catch (audioErr) {
+          console.error("Web Audio API processing for microphone failed:", audioErr);
+          this.micStream = rawStream;
+        }
+      }
     } else {
       if (this.micStream) {
-        stopMediaStream(this.micStream);
         this.micStream = null;
       }
+      if ((this as any).rawMicStream) {
+        stopMediaStream((this as any).rawMicStream);
+        (this as any).rawMicStream = null;
+      }
+      this.disconnectMicAudioNodes();
     }
 
     if (this.currentScreen === "viewer") {
@@ -1073,6 +1105,37 @@ export class MyElement extends LitElement {
 
     setStreamAudioEnabled(this.micStream, !this.localMuted);
     this.showToast(this.localMuted ? "마이크가 음소거되었습니다." : "마이크가 켜졌습니다.");
+  }
+
+  private handleMicVolumeInput(e: InputEvent) {
+    const val = parseInt((e.target as HTMLInputElement).value);
+    this.micVolume = val;
+    if (this.micGainNode && this.audioCtx) {
+      this.micGainNode.gain.setValueAtTime(val / 100, this.audioCtx.currentTime);
+    }
+  }
+
+  private handleSpeakerVolumeChange(e: CustomEvent<{ volume: number }>) {
+    this.speakerVolume = e.detail.volume;
+  }
+
+  private disconnectMicAudioNodes() {
+    try {
+      if (this.micSourceNode) {
+        this.micSourceNode.disconnect();
+        this.micSourceNode = null;
+      }
+      if (this.micGainNode) {
+        this.micGainNode.disconnect();
+        this.micGainNode = null;
+      }
+      if (this.micDestNode) {
+        this.micDestNode.disconnect();
+        this.micDestNode = null;
+      }
+    } catch (e) {
+      console.warn("Error disconnecting audio nodes: ", e);
+    }
   }
 
   // --- Speaker Mute Toggle ---
@@ -1193,8 +1256,12 @@ export class MyElement extends LitElement {
 
   // --- Helper to clean up streams ---
   private cleanupMediaStreams() {
-    stopMediaStream(this.screenStream);
     stopMediaStream(this.micStream);
+    if ((this as any).rawMicStream) {
+      stopMediaStream((this as any).rawMicStream);
+      (this as any).rawMicStream = null;
+    }
+    this.disconnectMicAudioNodes();
     this.screenStream = null;
     this.micStream = null;
     document.querySelectorAll("#viewer-received-audio").forEach((el) => el.remove());
@@ -1426,62 +1493,105 @@ export class MyElement extends LitElement {
                     </div>
 
                     <div
-                      class="relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 dark:border-slate-800"
+                      class="relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 dark:border-slate-800 group"
                     >
                       ${this.screenStream
-                        ? html` <video class="h-full w-full object-contain" autoplay muted playsinline></video> `
+                        ? html`
+                            <video class="h-full w-full object-contain" autoplay muted playsinline></video>
+                            
+                            <!-- Host Floating Control Overlay Bar -->
+                            <div
+                              class="pointer-events-auto absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 translate-y-0 items-center gap-2.5 rounded-2xl border border-slate-700/50 bg-slate-900/85 p-2 shadow-lg backdrop-blur transition-all duration-300 md:pointer-events-none md:translate-y-20 md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:translate-y-0 md:group-hover:opacity-100"
+                            >
+                              <!-- Mic Toggle and sliding volume slider -->
+                              <div class="group/vol flex items-center rounded-xl bg-slate-800/40 border border-slate-700/50 transition-all duration-300 hover:bg-slate-800/80">
+                                <button
+                                  @click=${this.toggleLocalMute}
+                                  class="${this.localMuted
+                                    ? "text-rose-400"
+                                    : "text-emerald-400"} flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-slate-800/60"
+                                  title="${this.localMuted ? "마이크 켜기" : "마이크 끄기"}"
+                                >
+                                  ${this.localMuted
+                                    ? html`<i data-lucide="mic-off" class="h-4.5 w-4.5"></i>`
+                                    : html`<i data-lucide="mic" class="h-4.5 w-4.5"></i>`}
+                                </button>
+                                <div class="flex items-center gap-1.5 w-0 opacity-0 overflow-hidden transition-all duration-300 group-hover/vol:w-24 group-hover/vol:opacity-100 group-hover/vol:pr-2.5">
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    .value=${this.micVolume}
+                                    @input=${this.handleMicVolumeInput}
+                                    ?disabled=${this.localMuted}
+                                    class="h-1 w-14 cursor-pointer appearance-none rounded-lg bg-slate-700 accent-google-blue focus:outline-none disabled:opacity-50"
+                                    title="마이크 송출 음량 조절"
+                                  />
+                                  <span class="text-[9px] text-slate-400 font-mono w-5 text-right">${this.micVolume}%</span>
+                                </div>
+                              </div>
+
+                              <!-- Speaker Toggle and sliding volume slider -->
+                              <div class="group/vol flex items-center rounded-xl bg-slate-800/40 border border-slate-700/50 transition-all duration-300 hover:bg-slate-800/80">
+                                <button
+                                  @click=${this.toggleSpeakerMute}
+                                  class="${this.speakerMuted
+                                    ? "text-rose-400"
+                                    : "text-emerald-400"} flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-slate-800/60"
+                                  title="${this.speakerMuted ? "사운드 켜기" : "사운드 끄기"}"
+                                >
+                                  ${this.speakerMuted
+                                    ? html`<i data-lucide="volume-x" class="h-4.5 w-4.5"></i>`
+                                    : html`<i data-lucide="volume-2" class="h-4.5 w-4.5"></i>`}
+                                </button>
+                                <div class="flex items-center gap-1.5 w-0 opacity-0 overflow-hidden transition-all duration-300 group-hover/vol:w-24 group-hover/vol:opacity-100 group-hover/vol:pr-2.5">
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    .value=${this.speakerVolume}
+                                    @input=${(e: InputEvent) => {
+                                      this.speakerVolume = parseInt((e.target as HTMLInputElement).value);
+                                      document.querySelectorAll("audio[data-viewer-id]").forEach((el) => {
+                                        (el as HTMLAudioElement).volume = this.speakerMuted ? 0 : this.speakerVolume / 100;
+                                      });
+                                    }}
+                                    ?disabled=${this.speakerMuted}
+                                    class="h-1 w-14 cursor-pointer appearance-none rounded-lg bg-slate-700 accent-google-blue focus:outline-none disabled:opacity-50"
+                                    title="스피커 수청 음량 조절"
+                                  />
+                                  <span class="text-[9px] text-slate-400 font-mono w-5 text-right">${this.speakerVolume}%</span>
+                                </div>
+                              </div>
+
+                              <!-- Divider -->
+                              <div class="mx-0.5 h-5 w-px bg-slate-700/50"></div>
+
+                              <!-- Change Shared Screen -->
+                              <button
+                                @click=${this.changeSharedScreen}
+                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/50 bg-slate-800/80 text-slate-300 transition-colors hover:bg-slate-700"
+                                title="공유 화면 변경"
+                              >
+                                  <i data-lucide="screen-share" class="h-4.5 w-4.5"></i>
+                                </button>
+
+                              <!-- Stop Sharing -->
+                              <button
+                                @click=${this.stopSharing}
+                                class="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-500/20 text-rose-400 transition-colors hover:bg-rose-500/30"
+                                title="공유 종료하기"
+                              >
+                                <i data-lucide="square" class="h-4 w-4 fill-rose-400"></i>
+                              </button>
+                            </div>
+                          `
                         : html`
                             <div class="flex h-full w-full flex-col items-center justify-center text-slate-400">
                               <i data-lucide="monitor-off" class="mb-2 h-10 w-10"></i>
                               <span class="text-xs">공유 화면이 없습니다.</span>
                             </div>
                           `}
-                    </div>
-
-                    <div class="mt-6 flex flex-col gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-                      <!-- Action buttons: Mic, Speaker, Change Share Screen / Stop sharing -->
-                      <div class="flex flex-col gap-2 sm:flex-row">
-                        <!-- Mic Toggle -->
-                        <button
-                          @click=${this.toggleLocalMute}
-                          class="${this.localMuted
-                            ? "bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/20 dark:text-rose-400"
-                            : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400"} flex grow items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition"
-                          title="${this.localMuted ? "마이크 켜기" : "마이크 끄기"}"
-                        >
-                          ${this.localMuted
-                            ? html`<i data-lucide="mic-off" class="h-4 w-4"></i> 마이크 꺼짐`
-                            : html`<i data-lucide="mic" class="h-4 w-4"></i> 마이크 켜짐`}
-                        </button>
-                        
-                        <!-- Speaker Toggle -->
-                        <button
-                          @click=${this.toggleSpeakerMute}
-                          class="${this.speakerMuted
-                            ? "bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/20 dark:text-rose-400"
-                            : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400"} flex grow items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition"
-                          title="${this.speakerMuted ? "사운드 켜기" : "사운드 끄기"}"
-                        >
-                          ${this.speakerMuted
-                            ? html`<i data-lucide="volume-x" class="h-4 w-4"></i> 사운드 꺼짐`
-                            : html`<i data-lucide="volume-2" class="h-4 w-4"></i> 사운드 켜짐`}
-                        </button>
-                      </div>
-                      <div class="flex flex-col gap-2 sm:flex-row mt-1">
-                        <button
-                          @click=${this.changeSharedScreen}
-                          class="text-google-blue flex grow items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-xs font-bold transition hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400"
-                        >
-                          <i data-lucide="screen-share" class="h-4 w-4"></i> 공유 화면 변경
-                        </button>
-                        <button
-                          @click=${this.stopSharing}
-                          class="flex items-center justify-center gap-2 rounded-lg bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-100"
-                        >
-                          <i data-lucide="square" class="h-3.5 w-3.5 fill-rose-600"></i>
-                          공유 종료하기
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -1509,6 +1619,7 @@ export class MyElement extends LitElement {
                 .activeRoomIp=${this.activeRoomIp}
                 .localMuted=${this.localMuted}
                 .speakerMuted=${this.speakerMuted}
+                .speakerVolume=${this.speakerVolume}
                 .chatMessages=${this.chatMessages}
                 .viewerCount=${this.viewerCount}
                 .participants=${this.activeParticipants}
@@ -1516,6 +1627,7 @@ export class MyElement extends LitElement {
                 .myNickname=${this.currentNickname}
                 @toggle-mute=${this.toggleLocalMute}
                 @toggle-speaker=${this.toggleSpeakerMute}
+                @change-speaker-volume=${this.handleSpeakerVolumeChange}
                 @leave-session=${this.leaveSession}
                 @send-message=${this.onSendMessage}
                 @show-toast=${(e: CustomEvent<{ message: string }>) => this.showToast(e.detail.message)}

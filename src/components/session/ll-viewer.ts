@@ -57,6 +57,7 @@ export class LlViewer extends LitElement {
   @property({ type: String }) activeRoomIp = "";
   @property({ type: Boolean }) localMuted = true;
   @property({ type: Boolean }) speakerMuted = false;
+  @property({ type: Number }) speakerVolume = 100;
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
@@ -95,20 +96,20 @@ export class LlViewer extends LitElement {
         <div
           id="fullscreen-wrapper"
           class="${this.isFullScreen
-            ? "fixed inset-0 z-50 flex h-screen w-screen gap-4 bg-slate-950 p-6 animate-in fade-in duration-200"
+            ? "fixed inset-0 z-50 h-screen w-screen bg-slate-950 animate-in fade-in duration-200"
             : "grid grid-cols-1 gap-4 xl:grid-cols-12"}"
         >
           <!-- Left: 16:9 Screen Capturer Screen (8/12) -->
-          <div class="${this.isFullScreen ? "flex-1 h-full min-w-0" : "flex flex-col space-y-4 xl:col-span-8"}">
+          <div class="${this.isFullScreen ? "absolute inset-0 w-full h-full z-10" : "flex flex-col space-y-4 xl:col-span-8"}">
             <div
               id="video-wrapper"
               class="dark:bg-slate-955 group ${this.isFullScreen
-                ? "h-full w-full rounded-2xl border border-slate-800"
+                ? "h-full w-full aspect-none"
                 : "rounded-2xl border border-slate-200 dark:border-slate-800 aspect-video"} relative flex w-full items-center justify-center overflow-hidden bg-slate-900"
             >
               <!-- Video Stream player (Shows when stream is available) -->
               ${this.stream
-                ? html` <video class="absolute inset-0 z-0 h-full w-full object-contain" autoplay playsinline ?muted=${this.speakerMuted}></video> `
+                ? html` <video class="absolute inset-0 z-0 h-full w-full object-contain" autoplay playsinline ?muted=${this.speakerMuted} .volume=${this.speakerMuted ? 0 : this.speakerVolume / 100}></video> `
                 : html`
                     <!-- Pulsing grey skeleton overlay when connecting -->
                     <div class="absolute inset-0 z-0 flex flex-col justify-between">
@@ -171,19 +172,33 @@ export class LlViewer extends LitElement {
                     : html`<i data-lucide="mic" class="h-5 w-5"></i>`}
                 </button>
 
-                <!-- Speaker Mute / Unmute -->
-                <button
-                  id="btn-speaker-toggle"
-                  @click=${this.toggleSpeakerMute}
-                  class="${this.speakerMuted
-                    ? "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
-                    : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"} flex h-10 w-10 items-center justify-center rounded-xl border border-transparent transition-colors"
-                  title="${this.speakerMuted ? "사운드 켜기" : "사운드 끄기"}"
-                >
-                  ${this.speakerMuted
-                    ? html`<i data-lucide="volume-x" class="h-5 w-5"></i>`
-                    : html`<i data-lucide="volume-2" class="h-5 w-5"></i>`}
-                </button>
+                <!-- Speaker Mute / Unmute and Volume Slider -->
+                <div class="group/vol flex items-center rounded-xl bg-slate-800/40 border border-slate-700/50 transition-all duration-300 hover:bg-slate-800/80">
+                  <button
+                    id="btn-speaker-toggle"
+                    @click=${this.toggleSpeakerMute}
+                    class="${this.speakerMuted
+                      ? "text-rose-400"
+                      : "text-emerald-400"} flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-slate-800/60"
+                    title="${this.speakerMuted ? "사운드 켜기" : "사운드 끄기"}"
+                  >
+                    ${this.speakerMuted
+                      ? html`<i data-lucide="volume-x" class="h-4.5 w-4.5"></i>`
+                      : html`<i data-lucide="volume-2" class="h-4.5 w-4.5"></i>`}
+                  </button>
+                  <div class="flex items-center gap-1.5 w-0 opacity-0 overflow-hidden transition-all duration-300 group-hover/vol:w-24 group-hover/vol:opacity-100 group-hover/vol:pr-2.5">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      .value=${this.speakerVolume}
+                      @input=${this.onSpeakerVolumeInput}
+                      class="h-1 w-14 cursor-pointer appearance-none rounded-lg bg-slate-700 accent-google-blue focus:outline-none"
+                      title="스피커 볼륨 조절"
+                    />
+                    <span class="text-[9px] text-slate-400 font-mono w-5 text-right">${this.speakerVolume}%</span>
+                  </div>
+                </div>
 
                 <!-- Divider line -->
                 <div class="mx-0.5 h-5 w-px bg-slate-700/50"></div>
@@ -210,7 +225,7 @@ export class LlViewer extends LitElement {
             .participants=${this.participants}
             .myNickname=${this.myNickname}
             @send-message=${this.onForwardSendMessage}
-            class="${this.isFullScreen ? "w-96 shrink-0 h-full flex flex-col" : "block w-full xl:col-span-4"}"
+            class="${this.isFullScreen ? "absolute right-6 top-6 z-20 w-96 max-h-[80vh] h-fit overflow-hidden rounded-3xl shadow-2xl" : "block w-full xl:col-span-4"}"
           ></ll-chat>
         </div>
       </div>
@@ -249,6 +264,18 @@ export class LlViewer extends LitElement {
   private onForwardSendMessage(e: CustomEvent<{ text: string }>) {
     e.stopPropagation();
     this.dispatchEvent(new CustomEvent("send-message", { detail: e.detail, bubbles: true, composed: true }));
+  }
+
+  private onSpeakerVolumeInput(e: InputEvent) {
+    const val = parseInt((e.target as HTMLInputElement).value);
+    this.speakerVolume = val;
+    this.dispatchEvent(
+      new CustomEvent("change-speaker-volume", {
+        detail: { volume: val },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 }
 

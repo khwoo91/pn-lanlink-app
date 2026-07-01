@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+﻿import { LitElement, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { createIcons } from "lucide";
 import { globalIcons } from "../../utils/icons";
@@ -10,6 +10,18 @@ export class LlChat extends LitElement {
       icons: globalIcons,
       root: this,
     });
+  }
+  updated(changedProperties: Map<string | number | symbol, unknown>) {
+    super.updated(changedProperties);
+    if (changedProperties.has("isFullScreen")) {
+      createIcons({
+        icons: globalIcons,
+        root: this,
+      });
+    }
+    if (changedProperties.has("chatMessages")) {
+      this.scrollToBottom();
+    }
   }
   createRenderRoot() {
     return this;
@@ -24,9 +36,14 @@ export class LlChat extends LitElement {
   @query("#chat-input-field") chatInputElement?: HTMLInputElement;
 
   render() {
+    const isInsidePiP = this.classList.contains("h-full");
+    const isExpanded = this.isFullScreen || isInsidePiP;
+
     return html`
       <div
-        class="flex w-full flex-col rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 ${this.isFullScreen ? 'h-full max-h-full' : 'h-auto max-h-115'}"
+        class="${isExpanded
+          ? "h-full max-h-full"
+          : "h-auto max-h-125"} flex w-full flex-col rounded-3xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
       >
         <!-- Chat header -->
         <div class="flex flex-col gap-1.5 border-b border-slate-200 p-3 dark:border-slate-800">
@@ -43,7 +60,18 @@ export class LlChat extends LitElement {
                 <span id="chat-user-count">${this.participants.length || this.viewerCount + 1}</span>명
               </span>
             </div>
-            <span class="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] text-emerald-500">보안됨</span>
+            <div class="flex items-center gap-2">
+              <span class="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] text-emerald-500">보안됨</span>
+
+              <!-- PiP Toggle Button -->
+              <button
+                @click=${this.onTriggerPiP}
+                class="flex h-5 w-5 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-200 dark:hover:bg-slate-800"
+                title="채팅 팝업 (항상 위 플로팅)"
+              >
+                <i data-lucide="external-link" class="h-3.5 w-3.5"></i>
+              </button>
+            </div>
           </div>
 
           <!-- 실시간 참여자 목록 노출 -->
@@ -60,7 +88,9 @@ export class LlChat extends LitElement {
         <!-- Logs list -->
         <div
           id="chat-messages-box"
-          class="custom-scrollbar grow space-y-3 overflow-y-auto p-3 text-xs ${this.isFullScreen ? 'flex-1 min-h-0' : 'max-h-87.5 min-h-62.5'}"
+          class="custom-scrollbar ${isExpanded
+            ? "flex-1 min-h-0"
+            : "min-h-80"} grow space-y-3 overflow-y-auto p-3 text-xs"
         >
           ${this.chatMessages.map((msg) => {
             if (msg.system) {
@@ -100,7 +130,7 @@ export class LlChat extends LitElement {
 
         <!-- Chat form -->
         <div
-          class="flex gap-1.5 rounded-b-2xl border-t border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900"
+          class="flex gap-1.5 rounded-b-3xl border-t border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900"
         >
           <input
             type="text"
@@ -127,11 +157,25 @@ export class LlChat extends LitElement {
     if (this.chatInputElement) {
       this.chatInputElement.value = "";
     }
+    this.scrollToBottom();
   }
 
   private handleChatEnter(e: KeyboardEvent) {
     if (e.key === "Enter") {
       this.onSendMessage();
+    }
+  }
+
+  private onTriggerPiP() {
+    this.dispatchEvent(new CustomEvent("toggle-pip", { bubbles: true, composed: true }));
+  }
+
+  private scrollToBottom() {
+    const box = this.querySelector("#chat-messages-box");
+    if (box) {
+      setTimeout(() => {
+        box.scrollTop = box.scrollHeight;
+      }, 50);
     }
   }
 }

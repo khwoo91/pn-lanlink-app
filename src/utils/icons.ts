@@ -39,6 +39,7 @@ import {
   Play,
   Volume2,
   VolumeX,
+  ExternalLink,
 } from "lucide";
 
 export const globalIcons = {
@@ -82,4 +83,5 @@ export const globalIcons = {
   Play,
   Volume2,
   VolumeX,
+  ExternalLink,
 };
