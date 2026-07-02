@@ -596,10 +596,19 @@ export class MyElement extends LitElement {
 
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
 
-    if (this.micStream) {
-      const sender = pc.getSenders().find((s) => s.track && s.track.kind === "audio");
-      if (sender) {
-        sender.replaceTrack(this.micStream.getAudioTracks()[0]);
+    // Force client audio transceiver to be sendrecv to keep the microphone transmission path open
+    const audioTransceiver = pc.getTransceivers().find(
+      (t) =>
+        (t.receiver.track && t.receiver.track.kind === "audio") ||
+        (t.sender.track && t.sender.track.kind === "audio")
+    );
+    if (audioTransceiver) {
+      audioTransceiver.direction = "sendrecv";
+      if (this.micStream) {
+        const micTrack = this.micStream.getAudioTracks()[0];
+        if (micTrack) {
+          audioTransceiver.sender.replaceTrack(micTrack);
+        }
       }
     }
 
