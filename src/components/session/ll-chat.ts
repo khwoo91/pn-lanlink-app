@@ -119,7 +119,6 @@ export class LlChat extends LitElement {
             return isMe
               ? html`
                   <div class="flex w-full flex-col items-end space-y-1">
-                    <span class="text-[10px] font-semibold text-slate-400">나 (${this.myNickname})</span>
                     <div
                       class="max-w-[85%] rounded-2xl rounded-tr-none border border-[#c4d4ed] bg-[#d9e4f5] p-2.5 text-slate-800 dark:border-blue-800/30 dark:bg-blue-900/40 dark:text-slate-200"
                     >
