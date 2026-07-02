@@ -601,12 +601,20 @@ export class MyElement extends LitElement {
     channel.onopen = () => {
       if (this.currentScreen === "host") {
         this.updateParticipants();
+      } else if (this.currentScreen === "viewer") {
+        channel.send(JSON.stringify({ type: "request-participants" }));
       }
     };
 
     channel.onmessage = (event) => {
       try {
         const packet = JSON.parse(event.data);
+        if (packet.type === "request-participants") {
+          if (this.currentScreen === "host") {
+            this.updateParticipants();
+          }
+          return;
+        }
         if (packet.type === "participants-update") {
           this.activeParticipants = packet.list;
           this.viewerCount = packet.list.length - 1;
@@ -2025,6 +2033,7 @@ export class MyElement extends LitElement {
                 .localMuted=${this.localMuted}
                 .speakerMuted=${this.speakerMuted}
                 .speakerVolume=${this.speakerVolume}
+                .micVolume=${this.micVolume}
                 .chatMessages=${this.chatMessages}
                 .viewerCount=${this.viewerCount}
                 .participants=${this.activeParticipants}
@@ -2033,6 +2042,12 @@ export class MyElement extends LitElement {
                 @toggle-mute=${this.toggleLocalMute}
                 @toggle-speaker=${this.toggleSpeakerMute}
                 @change-speaker-volume=${this.handleSpeakerVolumeChange}
+                @change-mic-volume=${(e: CustomEvent<{ volume: number }>) => {
+                  this.micVolume = e.detail.volume;
+                  if (this.micGainNode && this.audioCtx) {
+                    this.micGainNode.gain.setValueAtTime(this.micVolume / 100, this.audioCtx.currentTime);
+                  }
+                }}
                 @leave-session=${this.leaveSession}
                 @send-message=${this.onSendMessage}
                 @show-toast=${(e: CustomEvent<{ message: string }>) => this.showToast(e.detail.message)}

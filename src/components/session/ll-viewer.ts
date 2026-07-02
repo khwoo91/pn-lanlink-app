@@ -63,6 +63,7 @@ export class LlViewer extends LitElement {
   @property({ type: Boolean }) localMuted = true;
   @property({ type: Boolean }) speakerMuted = false;
   @property({ type: Number }) speakerVolume = 100;
+  @property({ type: Number }) micVolume = 100;
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
@@ -162,19 +163,38 @@ export class LlViewer extends LitElement {
               <div
                 class="pointer-events-auto absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 translate-y-0 items-center gap-2 rounded-2xl border border-slate-700/50 bg-slate-900/85 p-2 opacity-100 shadow-lg backdrop-blur transition-all duration-300 md:pointer-events-none md:translate-y-20 md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:translate-y-0 md:group-hover:opacity-100"
               >
-                <!-- Mute / Unmute -->
-                <button
-                  id="btn-audio-toggle"
-                  @click=${this.onToggleMute}
-                  class="${this.localMuted
-                    ? "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
-                    : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"} flex h-10 w-10 items-center justify-center rounded-xl border border-transparent transition-colors"
-                  title="${this.localMuted ? "마이크 켜기" : "마이크 끄기"}"
+                <!-- Mic Mute & Volume Slider -->
+                <div
+                  class="group/vol flex items-center rounded-xl border border-slate-700/50 bg-slate-800/40 transition-all duration-300 hover:bg-slate-800/80"
                 >
-                  ${this.localMuted
-                    ? html`<i data-lucide="mic-off" class="h-5 w-5"></i>`
-                    : html`<i data-lucide="mic" class="h-5 w-5"></i>`}
-                </button>
+                  <button
+                    id="btn-audio-toggle"
+                    @click=${this.onToggleMute}
+                    class="${this.localMuted
+                      ? "text-rose-400"
+                      : "text-emerald-400"} flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-slate-800/60"
+                    title="${this.localMuted ? "마이크 켜기" : "마이크 끄기"}"
+                  >
+                    ${this.localMuted
+                      ? html`<i data-lucide="mic-off" class="h-4.5 w-4.5"></i>`
+                      : html`<i data-lucide="mic" class="h-4.5 w-4.5"></i>`}
+                  </button>
+                  <div
+                    class="flex w-0 items-center gap-1.5 overflow-hidden opacity-0 transition-all duration-300 group-hover/vol:w-24 group-hover/vol:pr-2.5 group-hover/vol:opacity-100"
+                  >
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      .value=${this.micVolume}
+                      @input=${this.onMicVolumeInput}
+                      ?disabled=${this.localMuted}
+                      class="accent-google-blue h-1 w-14 cursor-pointer appearance-none rounded-lg bg-slate-700 focus:outline-none disabled:opacity-50"
+                      title="마이크 음량 조절"
+                    />
+                    <span class="w-5 text-right font-mono text-[9px] text-slate-400">${this.micVolume}%</span>
+                  </div>
+                </div>
 
                 <!-- Speaker Mute / Unmute and Volume Slider -->
                 <div
@@ -301,6 +321,18 @@ export class LlViewer extends LitElement {
     this.speakerVolume = val;
     this.dispatchEvent(
       new CustomEvent("change-speaker-volume", {
+        detail: { volume: val },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  private onMicVolumeInput(e: InputEvent) {
+    const val = parseInt((e.target as HTMLInputElement).value);
+    this.micVolume = val;
+    this.dispatchEvent(
+      new CustomEvent("change-mic-volume", {
         detail: { volume: val },
         bubbles: true,
         composed: true,
