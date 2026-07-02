@@ -105,7 +105,11 @@ export class LlViewer extends LitElement {
             : "grid grid-cols-1 gap-4 xl:grid-cols-12"}"
         >
           <!-- Left: 16:9 Screen Capturer Screen (8/12) -->
-          <div class="${this.isFullScreen ? `relative h-full transition-all duration-300 ${this.chatCollapsed ? "w-full" : "w-[calc(100%-26rem)]"}` : "flex flex-col space-y-4 xl:col-span-8"}">
+          <div
+            class="${this.isFullScreen
+              ? `relative h-full transition-all duration-300 ${this.chatCollapsed ? "w-full" : "w-[calc(100%-26rem)]"}`
+              : "flex flex-col space-y-4 xl:col-span-8"}"
+          >
             <div
               id="video-wrapper"
               class="dark:bg-slate-955 group ${this.isFullScreen
@@ -114,7 +118,15 @@ export class LlViewer extends LitElement {
             >
               <!-- Video Stream player (Shows when stream is available) -->
               ${this.stream
-                ? html` <video class="absolute inset-0 z-0 h-full w-full object-contain" autoplay playsinline ?muted=${this.speakerMuted} .volume=${this.speakerMuted ? 0 : this.speakerVolume / 100}></video> `
+                ? html`
+                    <video
+                      class="absolute inset-0 z-0 h-full w-full object-contain"
+                      autoplay
+                      playsinline
+                      ?muted=${this.speakerMuted}
+                      .volume=${this.speakerMuted ? 0 : this.speakerVolume / 100}
+                    ></video>
+                  `
                 : html`
                     <!-- Pulsing grey skeleton overlay when connecting -->
                     <div class="absolute inset-0 z-0 flex flex-col justify-between">
@@ -129,19 +141,6 @@ export class LlViewer extends LitElement {
                       </div>
                     </div>
                   `}
-
-              <!-- Latency Badge overlay -->
-              <div
-                class="absolute top-4 left-4 z-20 flex items-center gap-1.5 rounded-lg border border-slate-700/50 bg-slate-900/80 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-400 shadow-sm backdrop-blur"
-              >
-                <span class="relative flex h-1.5 w-1.5">
-                  <span
-                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
-                  ></span>
-                  <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-50"></span>
-                </span>
-                <span>지연율: 1.2ms</span>
-              </div>
 
               <!-- VoIP audio active waves -->
               <div
@@ -178,7 +177,9 @@ export class LlViewer extends LitElement {
                 </button>
 
                 <!-- Speaker Mute / Unmute and Volume Slider -->
-                <div class="group/vol flex items-center rounded-xl bg-slate-800/40 border border-slate-700/50 transition-all duration-300 hover:bg-slate-800/80">
+                <div
+                  class="group/vol flex items-center rounded-xl border border-slate-700/50 bg-slate-800/40 transition-all duration-300 hover:bg-slate-800/80"
+                >
                   <button
                     id="btn-speaker-toggle"
                     @click=${this.toggleSpeakerMute}
@@ -191,17 +192,19 @@ export class LlViewer extends LitElement {
                       ? html`<i data-lucide="volume-x" class="h-4.5 w-4.5"></i>`
                       : html`<i data-lucide="volume-2" class="h-4.5 w-4.5"></i>`}
                   </button>
-                  <div class="flex items-center gap-1.5 w-0 opacity-0 overflow-hidden transition-all duration-300 group-hover/vol:w-24 group-hover/vol:opacity-100 group-hover/vol:pr-2.5">
+                  <div
+                    class="flex w-0 items-center gap-1.5 overflow-hidden opacity-0 transition-all duration-300 group-hover/vol:w-24 group-hover/vol:pr-2.5 group-hover/vol:opacity-100"
+                  >
                     <input
                       type="range"
                       min="0"
                       max="100"
                       .value=${this.speakerVolume}
                       @input=${this.onSpeakerVolumeInput}
-                      class="h-1 w-14 cursor-pointer appearance-none rounded-lg bg-slate-700 accent-google-blue focus:outline-none"
+                      class="accent-google-blue h-1 w-14 cursor-pointer appearance-none rounded-lg bg-slate-700 focus:outline-none"
                       title="스피커 볼륨 조절"
                     />
-                    <span class="text-[9px] text-slate-400 font-mono w-5 text-right">${this.speakerVolume}%</span>
+                    <span class="w-5 text-right font-mono text-[9px] text-slate-400">${this.speakerVolume}%</span>
                   </div>
                 </div>
 

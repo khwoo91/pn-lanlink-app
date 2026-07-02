@@ -81,6 +81,8 @@ export class MyElement extends LitElement {
   @state() private pendingRoomJoinCode: string = "";
   @state() private pendingRoomJoinIp: string = "";
   @state() private isSignalingConnected: boolean = false;
+  @state() private screenQualityPreset: "FHD" | "HD" | "SD" = "HD";
+  @state() private qualityDropdownOpen: boolean = false;
 
   // Active room details
   @state() private activeRoomName: string = "";
@@ -448,13 +450,40 @@ export class MyElement extends LitElement {
     };
 
     const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
+    const presets = {
+      FHD: 2500,
+      HD: 1500,
+      SD: 800
+    };
+    const mungedSdp = setVideoMaxBitrate(offer.sdp || "", presets[this.screenQualityPreset]);
+    const updatedOffer = new RTCSessionDescription({
+      type: offer.type,
+      sdp: mungedSdp
+    });
+    await pc.setLocalDescription(updatedOffer);
+
+    const videoSender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+    if (videoSender) {
+      const bitrates = {
+        FHD: 2500000,
+        HD: 1500000,
+        SD: 800000
+      };
+      try {
+        const params = videoSender.getParameters();
+        if (!params.encodings) params.encodings = [{}];
+        params.encodings[0].maxBitrate = bitrates[this.screenQualityPreset];
+        await videoSender.setParameters(params);
+      } catch (err) {
+        console.warn("Failed to set video sender maxBitrate:", err);
+      }
+    }
 
     this.sendSignalingMessage({
       type: "offer",
       from: "host",
       to: viewerId,
-      sdp: offer,
+      sdp: updatedOffer,
     });
 
     this.showToast(`👥 [${nickname || "참여자"}] 님이 P2P 연결을 수집하고 있습니다.`);
@@ -510,9 +539,7 @@ export class MyElement extends LitElement {
       this.viewerDataChannel = event.channel;
       this.setupDataChannel(event.channel, "host");
     };
-
-    pc.addTransceiver("audio", { direction: "sendrecv" });
-
+    
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
 
     if (this.micStream) {
@@ -729,6 +756,9 @@ export class MyElement extends LitElement {
 
     // Simulate real screen capture stream
     this.screenStream = await captureScreen();
+    if (this.screenStream) {
+      await this.applyQualityPreset(this.screenQualityPreset);
+    }
 
     this.hostSetupOpen = false;
     this.currentScreen = "host";
@@ -799,6 +829,7 @@ export class MyElement extends LitElement {
       return;
     }
     this.screenStream = stream;
+    await this.applyQualityPreset(this.screenQualityPreset);
 
     // 2. 방장 설정 상태 복원
     this.activeRoomCode = myCreatedRoomCode;
@@ -848,6 +879,7 @@ export class MyElement extends LitElement {
       }
 
       this.screenStream = newStream;
+      await this.applyQualityPreset(this.screenQualityPreset);
 
       const videoTrack = newStream.getVideoTracks()[0];
       this.hostConnections.forEach((pc) => {
@@ -926,15 +958,13 @@ export class MyElement extends LitElement {
 
   private onSubmitVerifyPassword(e: CustomEvent<{ password: string }>) {
     const entered = e.detail.password;
-    const enteredHash = hashPassword(entered);
-    // const targetHash = this.targetRoomPasswordHash;
 
-    console.log("[LANLink debug] onSubmitVerifyPassword:", {
-      entered,
-      targetRoomPasswordHash: this.targetRoomPasswordHash,
-      enteredHash,
-      isMatched: verifyPassword(entered, this.targetRoomPasswordHash),
-    });
+    // console.log("[LANLink debug] onSubmitVerifyPassword:", {
+    //   entered,
+    //   targetRoomPasswordHash: this.targetRoomPasswordHash,
+    //   enteredHash,
+    //   isMatched: verifyPassword(entered, this.targetRoomPasswordHash),
+    // });
 
     // Verify password using target room's password hash
     if (verifyPassword(entered, this.targetRoomPasswordHash)) {
@@ -970,6 +1000,9 @@ export class MyElement extends LitElement {
 
       // 화면 공유 스트림 다시 캡처
       this.screenStream = await captureScreen();
+      if (this.screenStream) {
+        await this.applyQualityPreset(this.screenQualityPreset);
+      }
 
       // 시그널링 서버에 재등록
       this.sendSignalingMessage({
@@ -1073,6 +1106,10 @@ export class MyElement extends LitElement {
           console.error("Web Audio API processing for microphone failed:", audioErr);
           this.micStream = rawStream;
         }
+      } else {
+        this.localMuted = true;
+        this.showToast("⚠️ 마이크 권한이 거부되었거나 수집할 장치가 없습니다.");
+        return;
       }
     } else {
       if (this.micStream) {
@@ -1088,7 +1125,7 @@ export class MyElement extends LitElement {
     if (this.currentScreen === "viewer") {
       const audioTransceiver = this.viewerConnection
         ?.getTransceivers()
-        .find((t) => t.receiver.track && t.receiver.track.kind === "audio");
+        .find((t) => t.sender && t.receiver && (t.receiver.track?.kind === "audio" || t.sender.track?.kind === "audio"));
       const sender = audioTransceiver?.sender;
       if (sender) {
         await sender.replaceTrack(this.micStream ? this.micStream.getAudioTracks()[0] : null);
@@ -1098,7 +1135,7 @@ export class MyElement extends LitElement {
       for (const pc of this.hostConnections.values()) {
         const audioTransceiver = pc
           .getTransceivers()
-          .find((t) => t.receiver.track && t.receiver.track.kind === "audio");
+          .find((t) => t.sender && t.receiver && (t.receiver.track?.kind === "audio" || t.sender.track?.kind === "audio"));
         const sender = audioTransceiver?.sender;
         if (sender) {
           await sender.replaceTrack(track);
@@ -1108,6 +1145,58 @@ export class MyElement extends LitElement {
 
     setStreamAudioEnabled(this.micStream, !this.localMuted);
     this.showToast(this.localMuted ? "마이크가 음소거되었습니다." : "마이크가 켜졌습니다.");
+  }
+
+  // --- Video Quality Preset Control ---
+  private async applyQualityPreset(presetKey: "FHD" | "HD" | "SD") {
+    this.screenQualityPreset = presetKey;
+    
+    const presets = {
+      FHD: { width: 1920, height: 1080, frameRate: 30, bitrate: 2500000 },
+      HD: { width: 1280, height: 720, frameRate: 20, bitrate: 1500000 },
+      SD: { width: 1280, height: 720, frameRate: 12, bitrate: 800000 }
+    };
+    
+    const preset = presets[presetKey];
+    
+    // 1. Apply to local screen capture track
+    if (this.screenStream) {
+      const videoTrack = this.screenStream.getVideoTracks()[0];
+      if (videoTrack) {
+        try {
+          await videoTrack.applyConstraints({
+            width: { ideal: preset.width },
+            height: { ideal: preset.height },
+            frameRate: { max: preset.frameRate }
+          });
+        } catch (err) {
+          console.warn("Failed to apply video constraints locally:", err);
+        }
+      }
+    }
+    
+    // 2. Apply maxBitrate to all active peer connection video senders
+    this.hostConnections.forEach(async (pc) => {
+      const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
+      if (sender) {
+        try {
+          const params = sender.getParameters();
+          if (!params.encodings) {
+            params.encodings = [{}];
+          }
+          params.encodings[0].maxBitrate = preset.bitrate;
+          await sender.setParameters(params);
+        } catch (err) {
+          console.warn("Failed to update maxBitrate on video sender:", err);
+        }
+      }
+    });
+
+    this.showToast(`⚙️ 화질이 [${presetKey === "FHD" ? "초고화질" : presetKey === "HD" ? "고화질" : "일반화질"}]로 설정되었습니다.`);
+  }
+
+  private toggleQualityDropdown() {
+    this.qualityDropdownOpen = !this.qualityDropdownOpen;
   }
 
   private handleMicVolumeInput(e: InputEvent) {
@@ -1801,6 +1890,60 @@ export class MyElement extends LitElement {
                               <!-- Divider -->
                               <div class="mx-0.5 h-5 w-px bg-slate-700/50"></div>
 
+                              <!-- Settings Toggle (Quality dropdown) -->
+                              <div class="relative flex items-center">
+                                <button
+                                  @click=${this.toggleQualityDropdown}
+                                  class="${this.qualityDropdownOpen ? 'text-emerald-400 bg-slate-800/40' : 'text-slate-300'} flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/50 bg-slate-800/80 transition-colors hover:bg-slate-700"
+                                  title="송출 화질 설정"
+                                >
+                                  <i data-lucide="settings" class="h-4.5 w-4.5"></i>
+                                </button>
+                                
+                                <!-- Quality Dropdown menu -->
+                                ${this.qualityDropdownOpen
+                                  ? html`
+                                      <div
+                                        class="absolute bottom-12 left-1/2 z-30 w-44 -translate-x-1/2 rounded-xl border border-slate-700/70 bg-slate-900/95 p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-150"
+                                      >
+                                        <div class="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                          송출 화질 선택
+                                        </div>
+                                        <button
+                                          @click=${() => {
+                                            this.applyQualityPreset("FHD");
+                                            this.qualityDropdownOpen = false;
+                                          }}
+                                          class="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition hover:bg-slate-800 ${this.screenQualityPreset === 'FHD' ? 'text-emerald-400' : 'text-slate-300'}"
+                                        >
+                                          <span>초고화질 (FHD)</span>
+                                          ${this.screenQualityPreset === 'FHD' ? html`<i data-lucide="check" class="h-3.5 w-3.5"></i>` : ""}
+                                        </button>
+                                        <button
+                                          @click=${() => {
+                                            this.applyQualityPreset("HD");
+                                            this.qualityDropdownOpen = false;
+                                          }}
+                                          class="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition hover:bg-slate-800 ${this.screenQualityPreset === 'HD' ? 'text-emerald-400' : 'text-slate-300'}"
+                                        >
+                                          <span>고화질 (HD)</span>
+                                          ${this.screenQualityPreset === 'HD' ? html`<i data-lucide="check" class="h-3.5 w-3.5"></i>` : ""}
+                                        </button>
+                                        <button
+                                          @click=${() => {
+                                            this.applyQualityPreset("SD");
+                                            this.qualityDropdownOpen = false;
+                                          }}
+                                          class="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition hover:bg-slate-800 ${this.screenQualityPreset === 'SD' ? 'text-emerald-400' : 'text-slate-300'}"
+                                        >
+                                          <span>일반화질 (최적화)</span>
+                                          ${this.screenQualityPreset === 'SD' ? html`<i data-lucide="check" class="h-3.5 w-3.5"></i>` : ""}
+                                        </button>
+                                      </div>
+                                    `
+                                  : ""}
+                              </div>
+
                               <!-- Change Shared Screen -->
                               <button
                                 @click=${this.changeSharedScreen}
@@ -2062,4 +2205,9 @@ export class MyElement extends LitElement {
       </div>
     `;
   }
+}
+
+function setVideoMaxBitrate(sdp: string, bitrateKbps: number): string {
+  if (!sdp.includes("a=mid:video")) return sdp;
+  return sdp.replace(/a=mid:video\r\n/g, `a=mid:video\r\nb=AS:${bitrateKbps}\r\n`);
 }
