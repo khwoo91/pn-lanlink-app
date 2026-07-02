@@ -437,8 +437,9 @@ export class MyElement extends LitElement {
     };
 
     pc.ontrack = (event) => {
-      const remoteStream = event.streams[0];
       if (event.track.kind === "audio") {
+        const remoteStream = event.streams[0] || new MediaStream([event.track]);
+        document.querySelectorAll(`audio[data-viewer-id="${viewerId}"]`).forEach((el) => el.remove());
         const audio = document.createElement("audio");
         audio.srcObject = remoteStream;
         audio.autoplay = true;
@@ -453,12 +454,12 @@ export class MyElement extends LitElement {
     const presets = {
       FHD: 2500,
       HD: 1500,
-      SD: 800
+      SD: 800,
     };
     const mungedSdp = setVideoMaxBitrate(offer.sdp || "", presets[this.screenQualityPreset]);
     const updatedOffer = new RTCSessionDescription({
       type: offer.type,
-      sdp: mungedSdp
+      sdp: mungedSdp,
     });
     await pc.setLocalDescription(updatedOffer);
 
@@ -467,7 +468,7 @@ export class MyElement extends LitElement {
       const bitrates = {
         FHD: 2500000,
         HD: 1500000,
-        SD: 800000
+        SD: 800000,
       };
       try {
         const params = videoSender.getParameters();
@@ -539,7 +540,7 @@ export class MyElement extends LitElement {
       this.viewerDataChannel = event.channel;
       this.setupDataChannel(event.channel, "host");
     };
-    
+
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
 
     if (this.micStream) {
@@ -597,6 +598,12 @@ export class MyElement extends LitElement {
   }
 
   private setupDataChannel(channel: RTCDataChannel, _remotePeerId: string) {
+    channel.onopen = () => {
+      if (this.currentScreen === "host") {
+        this.updateParticipants();
+      }
+    };
+
     channel.onmessage = (event) => {
       try {
         const packet = JSON.parse(event.data);
@@ -1125,7 +1132,7 @@ export class MyElement extends LitElement {
     if (this.currentScreen === "viewer") {
       const audioTransceiver = this.viewerConnection
         ?.getTransceivers()
-        .find((t) => t.sender && t.receiver && (t.receiver.track?.kind === "audio" || t.sender.track?.kind === "audio"));
+        .find((t) => t.receiver.track && t.receiver.track.kind === "audio");
       const sender = audioTransceiver?.sender;
       if (sender) {
         await sender.replaceTrack(this.micStream ? this.micStream.getAudioTracks()[0] : null);
@@ -1135,7 +1142,7 @@ export class MyElement extends LitElement {
       for (const pc of this.hostConnections.values()) {
         const audioTransceiver = pc
           .getTransceivers()
-          .find((t) => t.sender && t.receiver && (t.receiver.track?.kind === "audio" || t.sender.track?.kind === "audio"));
+          .find((t) => t.receiver.track && t.receiver.track.kind === "audio");
         const sender = audioTransceiver?.sender;
         if (sender) {
           await sender.replaceTrack(track);
@@ -1150,15 +1157,15 @@ export class MyElement extends LitElement {
   // --- Video Quality Preset Control ---
   private async applyQualityPreset(presetKey: "FHD" | "HD" | "SD") {
     this.screenQualityPreset = presetKey;
-    
+
     const presets = {
       FHD: { width: 1920, height: 1080, frameRate: 30, bitrate: 2500000 },
       HD: { width: 1280, height: 720, frameRate: 20, bitrate: 1500000 },
-      SD: { width: 1280, height: 720, frameRate: 12, bitrate: 800000 }
+      SD: { width: 1280, height: 720, frameRate: 12, bitrate: 800000 },
     };
-    
+
     const preset = presets[presetKey];
-    
+
     // 1. Apply to local screen capture track
     if (this.screenStream) {
       const videoTrack = this.screenStream.getVideoTracks()[0];
@@ -1167,14 +1174,14 @@ export class MyElement extends LitElement {
           await videoTrack.applyConstraints({
             width: { ideal: preset.width },
             height: { ideal: preset.height },
-            frameRate: { max: preset.frameRate }
+            frameRate: { max: preset.frameRate },
           });
         } catch (err) {
           console.warn("Failed to apply video constraints locally:", err);
         }
       }
     }
-    
+
     // 2. Apply maxBitrate to all active peer connection video senders
     this.hostConnections.forEach(async (pc) => {
       const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video");
@@ -1192,7 +1199,9 @@ export class MyElement extends LitElement {
       }
     });
 
-    this.showToast(`⚙️ 화질이 [${presetKey === "FHD" ? "초고화질" : presetKey === "HD" ? "고화질" : "일반화질"}]로 설정되었습니다.`);
+    this.showToast(
+      `⚙️ 화질이 [${presetKey === "FHD" ? "초고화질" : presetKey === "HD" ? "고화질" : "일반화질"}]로 설정되었습니다.`
+    );
   }
 
   private toggleQualityDropdown() {
@@ -1894,50 +1903,66 @@ export class MyElement extends LitElement {
                               <div class="relative flex items-center">
                                 <button
                                   @click=${this.toggleQualityDropdown}
-                                  class="${this.qualityDropdownOpen ? 'text-emerald-400 bg-slate-800/40' : 'text-slate-300'} flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/50 bg-slate-800/80 transition-colors hover:bg-slate-700"
-                                  title="송출 화질 설정"
+                                  class="${this.qualityDropdownOpen
+                                    ? "text-emerald-400 bg-slate-800/40"
+                                    : "text-slate-300"} flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/50 bg-slate-800/80 transition-colors hover:bg-slate-700"
+                                  title="화질"
                                 >
                                   <i data-lucide="settings" class="h-4.5 w-4.5"></i>
                                 </button>
-                                
+
                                 <!-- Quality Dropdown menu -->
                                 ${this.qualityDropdownOpen
                                   ? html`
                                       <div
-                                        class="absolute bottom-12 left-1/2 z-30 w-44 -translate-x-1/2 rounded-xl border border-slate-700/70 bg-slate-900/95 p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-150"
+                                        class="animate-in fade-in slide-in-from-bottom-2 absolute bottom-12 left-1/2 z-30 w-44 -translate-x-1/2 rounded-xl border border-slate-700/70 bg-slate-900/95 p-1.5 shadow-2xl backdrop-blur-md duration-150"
                                       >
-                                        <div class="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                          송출 화질 선택
+                                        <div
+                                          class="px-2 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+                                        >
+                                          화질 선택
                                         </div>
                                         <button
                                           @click=${() => {
                                             this.applyQualityPreset("FHD");
                                             this.qualityDropdownOpen = false;
                                           }}
-                                          class="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition hover:bg-slate-800 ${this.screenQualityPreset === 'FHD' ? 'text-emerald-400' : 'text-slate-300'}"
+                                          class="${this.screenQualityPreset === "FHD"
+                                            ? "text-emerald-400"
+                                            : "text-slate-300"} flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition hover:bg-slate-800"
                                         >
                                           <span>초고화질 (FHD)</span>
-                                          ${this.screenQualityPreset === 'FHD' ? html`<i data-lucide="check" class="h-3.5 w-3.5"></i>` : ""}
+                                          ${this.screenQualityPreset === "FHD"
+                                            ? html`<i data-lucide="check" class="h-3.5 w-3.5"></i>`
+                                            : ""}
                                         </button>
                                         <button
                                           @click=${() => {
                                             this.applyQualityPreset("HD");
                                             this.qualityDropdownOpen = false;
                                           }}
-                                          class="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition hover:bg-slate-800 ${this.screenQualityPreset === 'HD' ? 'text-emerald-400' : 'text-slate-300'}"
+                                          class="${this.screenQualityPreset === "HD"
+                                            ? "text-emerald-400"
+                                            : "text-slate-300"} flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition hover:bg-slate-800"
                                         >
                                           <span>고화질 (HD)</span>
-                                          ${this.screenQualityPreset === 'HD' ? html`<i data-lucide="check" class="h-3.5 w-3.5"></i>` : ""}
+                                          ${this.screenQualityPreset === "HD"
+                                            ? html`<i data-lucide="check" class="h-3.5 w-3.5"></i>`
+                                            : ""}
                                         </button>
                                         <button
                                           @click=${() => {
                                             this.applyQualityPreset("SD");
                                             this.qualityDropdownOpen = false;
                                           }}
-                                          class="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition hover:bg-slate-800 ${this.screenQualityPreset === 'SD' ? 'text-emerald-400' : 'text-slate-300'}"
+                                          class="${this.screenQualityPreset === "SD"
+                                            ? "text-emerald-400"
+                                            : "text-slate-300"} flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition hover:bg-slate-800"
                                         >
                                           <span>일반화질 (최적화)</span>
-                                          ${this.screenQualityPreset === 'SD' ? html`<i data-lucide="check" class="h-3.5 w-3.5"></i>` : ""}
+                                          ${this.screenQualityPreset === "SD"
+                                            ? html`<i data-lucide="check" class="h-3.5 w-3.5"></i>`
+                                            : ""}
                                         </button>
                                       </div>
                                     `

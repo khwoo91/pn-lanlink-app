@@ -1,4 +1,4 @@
-﻿import { LitElement, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { createIcons } from "lucide";
 import { globalIcons } from "../../utils/icons";
@@ -68,6 +68,7 @@ export class LlChat extends LitElement {
               </span>
             </div>
             <div class="flex items-center gap-2">
+              <span class="rounded bg-blue-500/10 px-1.5 py-0.5 font-mono text-[9px] text-blue-500 dark:bg-blue-500/20 dark:text-blue-400">나: ${this.myNickname}</span>
               <span class="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] text-emerald-500">보안됨</span>
 
               <!-- PiP Toggle Button -->
@@ -119,6 +120,7 @@ export class LlChat extends LitElement {
             return isMe
               ? html`
                   <div class="flex w-full flex-col items-end space-y-1">
+                    <span class="text-[10px] font-semibold text-slate-400">나 (${this.myNickname})</span>
                     <div
                       class="max-w-[85%] rounded-2xl rounded-tr-none border border-[#c4d4ed] bg-[#d9e4f5] p-2.5 text-slate-800 dark:border-blue-800/30 dark:bg-blue-900/40 dark:text-slate-200"
                     >
