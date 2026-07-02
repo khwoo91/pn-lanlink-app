@@ -1,4 +1,4 @@
-﻿import { LitElement, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { createIcons } from "lucide";
 import { globalIcons } from "../../utils/icons";
@@ -13,7 +13,11 @@ export class LlChat extends LitElement {
   }
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
-    if (changedProperties.has("isFullScreen")) {
+    if (
+      changedProperties.has("isFullScreen") ||
+      changedProperties.has("isPiP") ||
+      changedProperties.has("showPiPButton")
+    ) {
       createIcons({
         icons: globalIcons,
         root: this,
@@ -28,6 +32,8 @@ export class LlChat extends LitElement {
   }
 
   @property({ type: Boolean }) isFullScreen = false;
+  @property({ type: Boolean }) isPiP = false;
+  @property({ type: Boolean }) showPiPButton = false;
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
@@ -36,8 +42,7 @@ export class LlChat extends LitElement {
   @query("#chat-input-field") chatInputElement?: HTMLInputElement;
 
   render() {
-    const isInsidePiP = this.classList.contains("h-full");
-    const isExpanded = this.isFullScreen || isInsidePiP;
+    const isExpanded = this.isFullScreen || this.isPiP;
 
     return html`
       <div
@@ -64,13 +69,17 @@ export class LlChat extends LitElement {
               <span class="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] text-emerald-500">보안됨</span>
 
               <!-- PiP Toggle Button -->
-              <button
-                @click=${this.onTriggerPiP}
-                class="flex h-5 w-5 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-200 dark:hover:bg-slate-800"
-                title="채팅 팝업 (항상 위 플로팅)"
-              >
-                <i data-lucide="external-link" class="h-3.5 w-3.5"></i>
-              </button>
+              ${this.showPiPButton
+                ? html`
+                    <button
+                      @click=${this.onTriggerPiP}
+                      class="flex h-5 w-5 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-200 dark:hover:bg-slate-800"
+                      title="채팅 팝업 (항상 위 플로팅)"
+                    >
+                      <i data-lucide="external-link" class="h-3.5 w-3.5"></i>
+                    </button>
+                  `
+                : ""}
             </div>
           </div>
 

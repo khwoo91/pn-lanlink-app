@@ -1238,6 +1238,7 @@ export class MyElement extends LitElement {
         this.originalChatParent.appendChild(chatEl);
       }
       
+      (chatEl as any).isPiP = false;
       chatEl.classList.remove("h-full", "w-full");
       chatEl.removeAttribute("style");
       
@@ -1286,6 +1287,7 @@ export class MyElement extends LitElement {
         }
 
         // ll-chat 엘리먼트 스타일 부여
+        (chatEl as any).isPiP = true;
         chatEl.classList.add("h-full", "w-full");
         chatEl.style.height = "100vh";
         chatEl.style.display = "flex";
@@ -1339,6 +1341,7 @@ export class MyElement extends LitElement {
         }
 
         // ll-chat 엘리먼트 스타일 부여
+        (chatEl as any).isPiP = true;
         chatEl.classList.add("h-full", "w-full");
         chatEl.style.height = "100vh";
         chatEl.style.display = "flex";
@@ -1812,6 +1815,7 @@ export class MyElement extends LitElement {
                     .viewerCount=${this.viewerCount}
                     .participants=${this.activeParticipants}
                     .myNickname=${this.currentNickname}
+                    .showPiPButton=${true}
                     @send-message=${this.onSendMessage}
                     @toggle-pip=${this.handleTogglePiP}
                     class="block w-full"
@@ -1840,7 +1844,6 @@ export class MyElement extends LitElement {
                 @change-speaker-volume=${this.handleSpeakerVolumeChange}
                 @leave-session=${this.leaveSession}
                 @send-message=${this.onSendMessage}
-                @toggle-pip=${this.handleTogglePiP}
                 @show-toast=${(e: CustomEvent<{ message: string }>) => this.showToast(e.detail.message)}
               >
                 <ll-voice .localMuted=${this.localMuted}></ll-voice>
