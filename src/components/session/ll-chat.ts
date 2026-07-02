@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+﻿import { LitElement, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { createIcons } from "lucide";
 import { globalIcons } from "../../utils/icons";
@@ -46,9 +46,11 @@ export class LlChat extends LitElement {
 
     return html`
       <div
-        class="${isExpanded
-          ? "h-full max-h-full"
-          : "h-auto max-h-125"} flex w-full flex-col rounded-3xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
+        class="${this.isPiP
+          ? "h-full max-h-full border-none rounded-none"
+          : isExpanded
+            ? "max-h-full rounded-3xl border border-slate-200 dark:border-slate-800"
+            : "max-h-125 rounded-3xl border border-slate-200 dark:border-slate-800"} flex h-full w-full flex-col bg-slate-50 dark:bg-slate-950"
       >
         <!-- Chat header -->
         <div class="flex flex-col gap-1.5 border-b border-slate-200 p-3 dark:border-slate-800">
@@ -59,7 +61,7 @@ export class LlChat extends LitElement {
               </h4>
               <span
                 class="bg-google-blue/10 text-google-blue flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
-                title="채팅방 동시 참여 인원"
+                title="채팅방 참여 인원"
               >
                 <i data-lucide="users" class="h-2.5 w-2.5"></i>
                 <span id="chat-user-count">${this.participants.length || this.viewerCount + 1}</span>명
@@ -144,7 +146,7 @@ export class LlChat extends LitElement {
           <input
             type="text"
             id="chat-input-field"
-            placeholder="메시지 전송..."
+            placeholder="메시지를 입력하세요..."
             @keydown=${this.handleChatEnter}
             class="focus:border-google-blue grow rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
           />

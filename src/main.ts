@@ -91,8 +91,7 @@ export class MyElement extends LitElement {
   @state() private chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [
     {
       sender: "System",
-      content:
-        "📢 보안 안내: 해당 대화 내역은 외부 서버에 저장되지 않고 WebRTC 패킷으로 흐르며, 방 종료 즉시 메모리에서 완벽하게 파기됩니다.",
+      content: "📢 안내: 채팅방 대화 내역은 저장되지 않고, 방 종료시 대화내용은 삭제됩니다.",
       system: true,
     },
   ];
@@ -1000,8 +999,7 @@ export class MyElement extends LitElement {
     this.chatMessages = [
       {
         sender: "System",
-        content:
-          "📢 채팅방 안내: 해당 대화 내역은 외부 서버에 저장되지 않고, 채팅방이 종료되면 모든 대화내용은 삭제됩니다.",
+        content: "📢 안내: 채팅방 대화 내역은 저장되지 않고, 방 종료시 대화내용은 삭제됩니다.",
         system: true,
       },
     ];
@@ -1224,7 +1222,7 @@ export class MyElement extends LitElement {
       <span class="text-xs font-semibold">채팅창이 팝업으로 분리되었습니다.</span>
       <button class="mt-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer">채팅창 원복하기</button>
     `;
-    
+
     // placeholder 내 버튼 클릭 시 PiP 닫기
     placeholder.querySelector("button")?.addEventListener("click", () => {
       if (this.pipWindow) this.pipWindow.close();
@@ -1237,11 +1235,11 @@ export class MyElement extends LitElement {
       } else if (this.originalChatParent) {
         this.originalChatParent.appendChild(chatEl);
       }
-      
+
       (chatEl as any).isPiP = false;
       chatEl.classList.remove("h-full", "w-full");
       chatEl.removeAttribute("style");
-      
+
       // Lucide 아이콘 재생성
       createIcons({
         icons: globalIcons,
@@ -1279,8 +1277,12 @@ export class MyElement extends LitElement {
         const pipDoc = pipWin.document;
         copyStyles(pipDoc);
 
+        pipDoc.documentElement.style.height = "100%";
+        pipDoc.documentElement.style.width = "100%";
         pipDoc.body.style.margin = "0";
-        pipDoc.body.style.height = "100vh";
+        pipDoc.body.style.height = "100%";
+        pipDoc.body.style.width = "100%";
+        pipDoc.body.style.overflow = "hidden";
         pipDoc.body.style.backgroundColor = document.body.classList.contains("dark") ? "#0f172a" : "#ffffff";
         if (document.body.classList.contains("dark")) {
           pipDoc.documentElement.classList.add("dark");
@@ -1289,7 +1291,9 @@ export class MyElement extends LitElement {
         // ll-chat 엘리먼트 스타일 부여
         (chatEl as any).isPiP = true;
         chatEl.classList.add("h-full", "w-full");
-        chatEl.style.height = "100vh";
+        chatEl.style.height = "100%";
+        chatEl.style.width = "100%";
+        chatEl.style.maxWidth = "100%";
         chatEl.style.display = "flex";
         chatEl.style.flexDirection = "column";
         chatEl.style.minHeight = "0";
@@ -1333,8 +1337,12 @@ export class MyElement extends LitElement {
         const pipDoc = fallbackWin.document;
         copyStyles(pipDoc);
 
+        pipDoc.documentElement.style.height = "100%";
+        pipDoc.documentElement.style.width = "100%";
         pipDoc.body.style.margin = "0";
-        pipDoc.body.style.height = "100vh";
+        pipDoc.body.style.height = "100%";
+        pipDoc.body.style.width = "100%";
+        pipDoc.body.style.overflow = "hidden";
         pipDoc.body.style.backgroundColor = document.body.classList.contains("dark") ? "#0f172a" : "#ffffff";
         if (document.body.classList.contains("dark")) {
           pipDoc.documentElement.classList.add("dark");
@@ -1343,7 +1351,9 @@ export class MyElement extends LitElement {
         // ll-chat 엘리먼트 스타일 부여
         (chatEl as any).isPiP = true;
         chatEl.classList.add("h-full", "w-full");
-        chatEl.style.height = "100vh";
+        chatEl.style.height = "100%";
+        chatEl.style.width = "100%";
+        chatEl.style.maxWidth = "100%";
         chatEl.style.display = "flex";
         chatEl.style.flexDirection = "column";
         chatEl.style.minHeight = "0";
@@ -1605,12 +1615,11 @@ export class MyElement extends LitElement {
         <!-- Active Host Sharing Workspace -->
         ${this.currentScreen === "host"
           ? html`
-              <div id="sharing-active-workspace" class="mx-auto flex w-full max-w-7xl flex-col gap-8">
-                <!-- Top Section: 2 Columns (Info Panel & Video Preview) -->
-                <div class="grid grid-cols-1 gap-8 xl:grid-cols-12">
+              <div id="sharing-active-workspace" class="mx-auto w-full max-w-7xl">
+                <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                   <!-- Left: Host Info, QR Code, Link & Action buttons (5/12) -->
                   <div
-                    class="custom-shadow animate-in zoom-in-95 flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 xl:col-span-5 dark:border-slate-800 dark:bg-slate-900"
+                    class="custom-shadow animate-in zoom-in-95 order-3 flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 md:order-2 md:col-span-1 dark:border-slate-800 dark:bg-slate-900"
                   >
                     <div class="space-y-6">
                       <!-- Title & Participant count -->
@@ -1689,7 +1698,7 @@ export class MyElement extends LitElement {
 
                   <!-- Right: Host Screen Video Preview (7/12) -->
                   <div
-                    class="custom-shadow animate-in zoom-in-95 flex flex-col rounded-3xl border border-slate-200 bg-white p-6 xl:col-span-7 dark:border-slate-800 dark:bg-slate-900"
+                    class="custom-shadow animate-in zoom-in-95 order-1 flex flex-col rounded-3xl border border-slate-200 bg-white p-6 md:col-span-2 dark:border-slate-800 dark:bg-slate-900"
                   >
                     <div
                       class="mb-4 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800"
@@ -1704,18 +1713,20 @@ export class MyElement extends LitElement {
                     </div>
 
                     <div
-                      class="relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 dark:border-slate-800 group"
+                      class="group relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 dark:border-slate-800"
                     >
                       ${this.screenStream
                         ? html`
                             <video class="h-full w-full object-contain" autoplay muted playsinline></video>
-                            
+
                             <!-- Host Floating Control Overlay Bar -->
                             <div
                               class="pointer-events-auto absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 translate-y-0 items-center gap-2.5 rounded-2xl border border-slate-700/50 bg-slate-900/85 p-2 shadow-lg backdrop-blur transition-all duration-300 md:pointer-events-none md:translate-y-20 md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:translate-y-0 md:group-hover:opacity-100"
                             >
                               <!-- Mic Toggle and sliding volume slider -->
-                              <div class="group/vol flex items-center rounded-xl bg-slate-800/40 border border-slate-700/50 transition-all duration-300 hover:bg-slate-800/80">
+                              <div
+                                class="group/vol flex items-center rounded-xl border border-slate-700/50 bg-slate-800/40 transition-all duration-300 hover:bg-slate-800/80"
+                              >
                                 <button
                                   @click=${this.toggleLocalMute}
                                   class="${this.localMuted
@@ -1727,7 +1738,9 @@ export class MyElement extends LitElement {
                                     ? html`<i data-lucide="mic-off" class="h-4.5 w-4.5"></i>`
                                     : html`<i data-lucide="mic" class="h-4.5 w-4.5"></i>`}
                                 </button>
-                                <div class="flex items-center gap-1.5 w-0 opacity-0 overflow-hidden transition-all duration-300 group-hover/vol:w-24 group-hover/vol:opacity-100 group-hover/vol:pr-2.5">
+                                <div
+                                  class="flex w-0 items-center gap-1.5 overflow-hidden opacity-0 transition-all duration-300 group-hover/vol:w-24 group-hover/vol:pr-2.5 group-hover/vol:opacity-100"
+                                >
                                   <input
                                     type="range"
                                     min="0"
@@ -1735,15 +1748,19 @@ export class MyElement extends LitElement {
                                     .value=${this.micVolume}
                                     @input=${this.handleMicVolumeInput}
                                     ?disabled=${this.localMuted}
-                                    class="h-1 w-14 cursor-pointer appearance-none rounded-lg bg-slate-700 accent-google-blue focus:outline-none disabled:opacity-50"
-                                    title="마이크 송출 음량 조절"
+                                    class="accent-google-blue h-1 w-14 cursor-pointer appearance-none rounded-lg bg-slate-700 focus:outline-none disabled:opacity-50"
+                                    title="마이크 음량 조절"
                                   />
-                                  <span class="text-[9px] text-slate-400 font-mono w-5 text-right">${this.micVolume}%</span>
+                                  <span class="w-5 text-right font-mono text-[9px] text-slate-400"
+                                    >${this.micVolume}%</span
+                                  >
                                 </div>
                               </div>
 
                               <!-- Speaker Toggle and sliding volume slider -->
-                              <div class="group/vol flex items-center rounded-xl bg-slate-800/40 border border-slate-700/50 transition-all duration-300 hover:bg-slate-800/80">
+                              <div
+                                class="group/vol flex items-center rounded-xl border border-slate-700/50 bg-slate-800/40 transition-all duration-300 hover:bg-slate-800/80"
+                              >
                                 <button
                                   @click=${this.toggleSpeakerMute}
                                   class="${this.speakerMuted
@@ -1755,7 +1772,9 @@ export class MyElement extends LitElement {
                                     ? html`<i data-lucide="volume-x" class="h-4.5 w-4.5"></i>`
                                     : html`<i data-lucide="volume-2" class="h-4.5 w-4.5"></i>`}
                                 </button>
-                                <div class="flex items-center gap-1.5 w-0 opacity-0 overflow-hidden transition-all duration-300 group-hover/vol:w-24 group-hover/vol:opacity-100 group-hover/vol:pr-2.5">
+                                <div
+                                  class="flex w-0 items-center gap-1.5 overflow-hidden opacity-0 transition-all duration-300 group-hover/vol:w-24 group-hover/vol:pr-2.5 group-hover/vol:opacity-100"
+                                >
                                   <input
                                     type="range"
                                     min="0"
@@ -1764,14 +1783,18 @@ export class MyElement extends LitElement {
                                     @input=${(e: InputEvent) => {
                                       this.speakerVolume = parseInt((e.target as HTMLInputElement).value);
                                       document.querySelectorAll("audio[data-viewer-id]").forEach((el) => {
-                                        (el as HTMLAudioElement).volume = this.speakerMuted ? 0 : this.speakerVolume / 100;
+                                        (el as HTMLAudioElement).volume = this.speakerMuted
+                                          ? 0
+                                          : this.speakerVolume / 100;
                                       });
                                     }}
                                     ?disabled=${this.speakerMuted}
-                                    class="h-1 w-14 cursor-pointer appearance-none rounded-lg bg-slate-700 accent-google-blue focus:outline-none disabled:opacity-50"
-                                    title="스피커 수청 음량 조절"
+                                    class="accent-google-blue h-1 w-14 cursor-pointer appearance-none rounded-lg bg-slate-700 focus:outline-none disabled:opacity-50"
+                                    title="스피커 음량 조절"
                                   />
-                                  <span class="text-[9px] text-slate-400 font-mono w-5 text-right">${this.speakerVolume}%</span>
+                                  <span class="w-5 text-right font-mono text-[9px] text-slate-400"
+                                    >${this.speakerVolume}%</span
+                                  >
                                 </div>
                               </div>
 
@@ -1784,8 +1807,8 @@ export class MyElement extends LitElement {
                                 class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/50 bg-slate-800/80 text-slate-300 transition-colors hover:bg-slate-700"
                                 title="공유 화면 변경"
                               >
-                                  <i data-lucide="screen-share" class="h-4.5 w-4.5"></i>
-                                </button>
+                                <i data-lucide="screen-share" class="h-4.5 w-4.5"></i>
+                              </button>
 
                               <!-- Stop Sharing -->
                               <button
@@ -1805,21 +1828,21 @@ export class MyElement extends LitElement {
                           `}
                     </div>
                   </div>
-                </div>
 
-                <!-- Bottom Section: Chat Room taking full width -->
-                <div class="w-full">
-                  <ll-chat
-                    id="host-chat-element"
-                    .chatMessages=${this.chatMessages}
-                    .viewerCount=${this.viewerCount}
-                    .participants=${this.activeParticipants}
-                    .myNickname=${this.currentNickname}
-                    .showPiPButton=${true}
-                    @send-message=${this.onSendMessage}
-                    @toggle-pip=${this.handleTogglePiP}
-                    class="block w-full"
-                  ></ll-chat>
+                  <!-- Bottom Section: Chat Room taking full width -->
+                  <div class="order-2 md:order-3 md:col-span-1">
+                    <ll-chat
+                      id="host-chat-element"
+                      .chatMessages=${this.chatMessages}
+                      .viewerCount=${this.viewerCount}
+                      .participants=${this.activeParticipants}
+                      .myNickname=${this.currentNickname}
+                      .showPiPButton=${true}
+                      @send-message=${this.onSendMessage}
+                      @toggle-pip=${this.handleTogglePiP}
+                      class="animate-in zoom-in-95 block h-full w-full"
+                    ></ll-chat>
+                  </div>
                 </div>
               </div>
             `
@@ -1929,7 +1952,7 @@ export class MyElement extends LitElement {
               @click=${this.submitNickname}
               class="bg-google-blue hover:bg-google-blueHover grow rounded-xl py-2.5 text-xs font-bold text-white transition"
             >
-              대화명 저장 및 입장
+              저장
             </button>
           </div>
         </div>

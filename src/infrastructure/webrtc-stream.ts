@@ -15,10 +15,10 @@ export async function captureScreen(): Promise<MediaStream | null> {
   } catch (err) {
     console.warn("Display media capture failed or cancelled, falling back to mock stream: ", err);
   }
-  return createMockScreenStream();
+  return createScreenStream();
 }
 
-function createMockScreenStream(): MediaStream {
+function createScreenStream(): MediaStream {
   const canvas = document.createElement("canvas");
   canvas.width = 1280;
   canvas.height = 720;
@@ -65,17 +65,17 @@ function createMockScreenStream(): MediaStream {
 
     // Title
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 36px sans-serif";
+    ctx.font = "bold 50px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("LANLink Live Mock Screen Stream", 640, 260);
+    ctx.fillText("공유 화면 대기중", 640, 260);
 
     ctx.fillStyle = "#94a3b8";
-    ctx.font = "20px sans-serif";
-    ctx.fillText("(Real displayMedia capture fallback)", 640, 310);
+    ctx.font = "22px sans-serif";
+    ctx.fillText("공유할 화면을 선택해주세요.", 640, 310);
 
     // Live Time
     ctx.fillStyle = "#10b981";
-    ctx.font = "24px monospace";
+    ctx.font = "30px sans-serif";
     ctx.fillText(new Date().toLocaleTimeString(), 640, 420);
 
     angle += 0.05;
