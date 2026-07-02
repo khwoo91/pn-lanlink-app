@@ -137,6 +137,8 @@ export class MyElement extends LitElement {
   private hostConnections = new Map<string, RTCPeerConnection>();
   private hostDataChannels = new Map<string, RTCDataChannel>();
   private hostViewerNicknames = new Map<string, string>();
+  private viewerAudioDestNodes = new Map<string, MediaStreamAudioDestinationNode>();
+  private hostViewerAudioSources = new Map<string, MediaStreamAudioSourceNode>();
   private viewerConnection: RTCPeerConnection | null = null;
   private viewerDataChannel: RTCDataChannel | null = null;
   @state() protected activeStream: MediaStream | null = null;
@@ -410,8 +412,34 @@ export class MyElement extends LitElement {
       });
     }
 
+    if (!this.audioCtx) {
+      this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+
+    let outgoingAudioTrack: MediaStreamTrack | null = null;
+    if (this.audioCtx) {
+      const destNode = this.audioCtx.createMediaStreamDestination();
+      this.viewerAudioDestNodes.set(viewerId, destNode);
+
+      // 1. Link host's mic source node to this mixer if active
+      if (this.micGainNode) {
+        this.micGainNode.connect(destNode);
+      }
+
+      // 2. Link other existing viewers' audio sources to this viewer's mixer
+      this.hostViewerAudioSources.forEach((sourceNode, existingViewerId) => {
+        if (existingViewerId !== viewerId) {
+          sourceNode.connect(destNode);
+        }
+      });
+
+      outgoingAudioTrack = destNode.stream.getAudioTracks()[0];
+    }
+
     const audioTransceiver = pc.addTransceiver("audio", { direction: "sendrecv" });
-    if (this.micStream && !this.localMuted) {
+    if (outgoingAudioTrack) {
+      audioTransceiver.sender.replaceTrack(outgoingAudioTrack);
+    } else if (this.micStream && !this.localMuted) {
       const micTrack = this.micStream.getAudioTracks()[0];
       if (micTrack) {
         audioTransceiver.sender.replaceTrack(micTrack);
@@ -447,6 +475,31 @@ export class MyElement extends LitElement {
         audio.dataset.viewerId = viewerId;
         audio.muted = this.speakerMuted;
         document.body.appendChild(audio);
+
+        // 3. Multi-party audio mixing: convert incoming track into AudioNode and relay to all other viewer mix destinations
+        if (!this.audioCtx) {
+          this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        if (this.audioCtx) {
+          try {
+            const existingSource = this.hostViewerAudioSources.get(viewerId);
+            if (existingSource) {
+              existingSource.disconnect();
+            }
+
+            const sourceNode = this.audioCtx.createMediaStreamSource(remoteStream);
+            this.hostViewerAudioSources.set(viewerId, sourceNode);
+
+            // Connect this source node to all other viewers' mixer destinations
+            this.viewerAudioDestNodes.forEach((destNode, otherViewerId) => {
+              if (otherViewerId !== viewerId) {
+                sourceNode.connect(destNode);
+              }
+            });
+          } catch (err) {
+            console.error("Failed to map remote audio stream source node:", err);
+          }
+        }
       }
     };
 
@@ -589,6 +642,19 @@ export class MyElement extends LitElement {
       const nickname = this.hostViewerNicknames.get(from) || "참여자";
       this.hostViewerNicknames.delete(from);
       this.updateParticipants();
+
+      // Clean up multi-party audio mixing nodes for this peer
+      const destNode = this.viewerAudioDestNodes.get(from);
+      if (destNode) {
+        try { destNode.disconnect(); } catch (e) {}
+        this.viewerAudioDestNodes.delete(from);
+      }
+      const sourceNode = this.hostViewerAudioSources.get(from);
+      if (sourceNode) {
+        try { sourceNode.disconnect(); } catch (e) {}
+        this.hostViewerAudioSources.delete(from);
+      }
+
       document.querySelectorAll(`audio[data-viewer-id="${from}"]`).forEach((el) => el.remove());
       this.showToast(`🚪 [${nickname}] 님이 퇴장하셨습니다.`);
     } else if (this.currentScreen === "viewer" && from === "host") {
@@ -953,7 +1019,7 @@ export class MyElement extends LitElement {
   }
 
   private checkPasswordAndJoin(name: string, ip: string, isLocked: boolean, passwordHash?: string) {
-    console.log("[LANLink debug] checkPasswordAndJoin:", { name, ip, isLocked, passwordHash });
+    // console.log("[LANLink debug] checkPasswordAndJoin:", { name, ip, isLocked, passwordHash });
     this.tempJoinName = name;
     this.tempJoinIp = ip;
     this.targetRoomPasswordHash = passwordHash || "";
@@ -1117,6 +1183,15 @@ export class MyElement extends LitElement {
 
           this.micStream = this.micDestNode.stream;
           (this as any).rawMicStream = rawStream;
+
+          // Connect host mic source node to all active viewer mixers (for multi-party audio Relay)
+          this.viewerAudioDestNodes.forEach((destNode) => {
+            try {
+              this.micGainNode?.connect(destNode);
+            } catch (err) {
+              console.warn("Failed to connect host mic to viewer mixer node:", err);
+            }
+          });
         } catch (audioErr) {
           console.error("Web Audio API processing for microphone failed:", audioErr);
           this.micStream = rawStream;
@@ -1582,7 +1657,20 @@ export class MyElement extends LitElement {
     this.disconnectMicAudioNodes();
     this.screenStream = null;
     this.micStream = null;
+
+    // Disconnect and clear multi-party audio mixing nodes
+    this.viewerAudioDestNodes.forEach((destNode) => {
+      try { destNode.disconnect(); } catch (e) {}
+    });
+    this.viewerAudioDestNodes.clear();
+
+    this.hostViewerAudioSources.forEach((sourceNode) => {
+      try { sourceNode.disconnect(); } catch (e) {}
+    });
+    this.hostViewerAudioSources.clear();
+
     document.querySelectorAll("#viewer-received-audio").forEach((el) => el.remove());
+    document.querySelectorAll("audio[data-viewer-id]").forEach((el) => el.remove());
 
     if (this.pipWindow) {
       this.pipWindow.close();
