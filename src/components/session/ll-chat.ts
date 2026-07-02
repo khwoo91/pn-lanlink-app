@@ -68,7 +68,6 @@ export class LlChat extends LitElement {
               </span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="rounded bg-blue-500/10 px-1.5 py-0.5 font-mono text-[9px] text-blue-500 dark:bg-blue-500/20 dark:text-blue-400">나: ${this.myNickname}</span>
               <span class="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] text-emerald-500">보안됨</span>
 
               <!-- PiP Toggle Button -->
