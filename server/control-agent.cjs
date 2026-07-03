@@ -100,6 +100,8 @@ function runControlAgent() {
     'PageUp': Key.PageUp,
     'PageDown': Key.PageDown,
     'CapsLock': Key.CapsLock,
+    'HangulMode': Key.RightAlt,
+    'Process': Key.RightAlt,
     'F1': Key.F1,
     'F2': Key.F2,
     'F3': Key.F3,
