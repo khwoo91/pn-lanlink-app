@@ -14,11 +14,11 @@ const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
 const activeRooms = new Map(); // ip -> room
+const activeAgents = new Map(); // publicIp -> agentWs
 
 function sendFilteredRoomList(ws) {
   const rooms = Array.from(activeRooms.values());
   const filtered = rooms.filter(room => {
-    // 1. 호스트의 공인 IP와 뷰어의 공인 IP가 일치하는 경우
     return room.publicIp === ws.clientPublicIp;
   });
 
@@ -30,46 +30,85 @@ function sendFilteredRoomList(ws) {
   }));
 }
 
-// 모든 접속 중인 클라이언트별 맞춤형 목록 브로드캐스트
 function broadcastRoomList() {
   for (const client of wss.clients) {
-    if (client.readyState === 1) { // OPEN
+    if (client.readyState === 1 && !client.isAgent) { // OPEN and not an agent
       sendFilteredRoomList(client);
     }
   }
 }
 
+function broadcastAgentStatus(publicIp, connected) {
+  const payload = JSON.stringify({
+    type: 'agent-status',
+    from: 'server',
+    to: 'client',
+    connected: connected
+  });
+  for (const client of wss.clients) {
+    if (client.readyState === 1 && !client.isAgent) {
+      if (client.clientPublicIp === publicIp || publicIp === '127.0.0.1' || client.clientPublicIp === '127.0.0.1') {
+        client.send(payload);
+      }
+    }
+  }
+}
+
 wss.on('connection', (ws, req) => {
-  // 클라이언트의 공인 IP 추출
   let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
   if (clientIp.includes(',')) {
     clientIp = clientIp.split(',')[0].trim();
   }
-  // IPv6 로컬 주소들을 IPv4 루프백으로 일치
   if (clientIp === '::1' || clientIp === '::ffff:127.0.0.1') {
     clientIp = '127.0.0.1';
   }
 
   ws.clientPublicIp = clientIp;
+  ws.isAgent = false;
 
-  // 1. 최초 연결 시 클라이언트에게 공인 IP 정보를 전송 (client의 serverDetectedIp 획득용)
+  // Send initial server info with agent status to host
+  const agentExists = activeAgents.has(clientIp);
   ws.send(JSON.stringify({
     type: 'server-info',
     from: 'server',
     to: 'client',
-    ip: clientIp
+    ip: clientIp,
+    agentConnected: agentExists
   }));
 
-  // 2. 최초 연결 시 대기방 목록 송신
   sendFilteredRoomList(ws);
 
   ws.on('message', (message) => {
     try {
       const msg = JSON.parse(message.toString());
 
-      if (msg.type === 'room-register') {
+      // 1. Agent Registration from LANLink_Helper.exe
+      if (msg.type === 'agent-register') {
+        ws.isAgent = true;
+        activeAgents.set(ws.clientPublicIp, ws);
+        console.log(`🔌 [LANLink Server] Agent registered for IP: ${ws.clientPublicIp}`);
+        broadcastAgentStatus(ws.clientPublicIp, true);
+      } 
+      // 2. Host query agent connection status
+      else if (msg.type === 'agent-check') {
+        const exists = activeAgents.has(ws.clientPublicIp);
+        ws.send(JSON.stringify({
+          type: 'agent-status',
+          from: 'server',
+          to: 'client',
+          connected: exists
+        }));
+      }
+      // 3. Relay mouse/keyboard action events to the registered agent
+      else if (msg.type === 'agent-control') {
+        const agentWs = activeAgents.get(ws.clientPublicIp);
+        if (agentWs && agentWs.readyState === 1) {
+          agentWs.send(JSON.stringify(msg.control));
+        }
+      }
+      // 4. Room Register & Signaling messages
+      else if (msg.type === 'room-register') {
         ws.roomIp = msg.room.ip;
-        // 방 등록 정보에 호스트의 공인 IP 속성 부여
         msg.room.publicIp = ws.clientPublicIp;
         activeRooms.set(msg.room.ip, msg.room);
         broadcastRoomList();
@@ -86,7 +125,6 @@ wss.on('connection', (ws, req) => {
         sendFilteredRoomList(ws);
       }
       else {
-        // WebRTC 시그널링 교환 패킷 중계
         broadcast(msg, ws);
       }
     } catch (e) {
@@ -95,6 +133,11 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
+    if (ws.isAgent) {
+      activeAgents.delete(ws.clientPublicIp);
+      console.log(`❌ [LANLink Server] Agent disconnected for IP: ${ws.clientPublicIp}`);
+      broadcastAgentStatus(ws.clientPublicIp, false);
+    }
     if (ws.roomIp) {
       activeRooms.delete(ws.roomIp);
       broadcastRoomList();
@@ -102,13 +145,11 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-// 시그널링 교환용 기본 브로드캐스트
 function broadcast(data, senderWs) {
   const str = JSON.stringify(data);
   const senderIp = senderWs ? senderWs.clientPublicIp : null;
   for (const client of wss.clients) {
-    if (client.readyState === 1) { // OPEN
-      // 송신측과 수신측의 공인 IP가 같거나, 어느 한쪽이 127.0.0.1인 경우에만 릴레이
+    if (client.readyState === 1 && !client.isAgent) {
       if (!senderIp || 
           client.clientPublicIp === senderIp || 
           senderIp === '127.0.0.1' || 

@@ -83,6 +83,8 @@ export class MyElement extends LitElement {
   @state() private isSignalingConnected: boolean = false;
   @state() private screenQualityPreset: "FHD" | "HD" | "SD" = "HD";
   @state() private qualityDropdownOpen: boolean = false;
+  @state() private remoteControlAllowed: boolean = false;
+  @state() private isAgentConnected: boolean = false;
 
   // Active room details
   @state() private activeRoomName: string = "";
@@ -302,8 +304,21 @@ export class MyElement extends LitElement {
       try {
         const msg = JSON.parse(event.data);
 
+        if (msg.type === "agent-status") {
+          this.isAgentConnected = msg.connected;
+          this.remoteControlAllowed = msg.connected;
+          if (this.isAgentConnected) {
+            this.showToast("🔌 로컬 원격 제어 에이전트가 연결되었습니다.");
+          } else {
+            this.showToast("❌ 로컬 원격 제어 에이전트 연결이 끊어졌습니다.");
+          }
+          return;
+        }
+
         if (msg.type === "server-info") {
           this.serverDetectedIp = msg.ip;
+          this.isAgentConnected = msg.agentConnected || false;
+          this.remoteControlAllowed = msg.agentConnected || false;
           // console.log("Server detected IP:", this.serverDetectedIp);
 
           if (this.currentScreen === "host") {
@@ -597,11 +612,12 @@ export class MyElement extends LitElement {
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
 
     // Force client audio transceiver to be sendrecv to keep the microphone transmission path open
-    const audioTransceiver = pc.getTransceivers().find(
-      (t) =>
-        (t.receiver.track && t.receiver.track.kind === "audio") ||
-        (t.sender.track && t.sender.track.kind === "audio")
-    );
+    const audioTransceiver = pc
+      .getTransceivers()
+      .find(
+        (t) =>
+          (t.receiver.track && t.receiver.track.kind === "audio") || (t.sender.track && t.sender.track.kind === "audio")
+      );
     if (audioTransceiver) {
       audioTransceiver.direction = "sendrecv";
       if (this.micStream) {
@@ -655,12 +671,16 @@ export class MyElement extends LitElement {
       // Clean up multi-party audio mixing nodes for this peer
       const destNode = this.viewerAudioDestNodes.get(from);
       if (destNode) {
-        try { destNode.disconnect(); } catch (e) {}
+        try {
+          destNode.disconnect();
+        } catch (e) {}
         this.viewerAudioDestNodes.delete(from);
       }
       const sourceNode = this.hostViewerAudioSources.get(from);
       if (sourceNode) {
-        try { sourceNode.disconnect(); } catch (e) {}
+        try {
+          sourceNode.disconnect();
+        } catch (e) {}
         this.hostViewerAudioSources.delete(from);
       }
 
@@ -693,6 +713,20 @@ export class MyElement extends LitElement {
         if (packet.type === "participants-update") {
           this.activeParticipants = packet.list;
           this.viewerCount = packet.list.length - 1;
+          return;
+        }
+        if (packet.type === "control-action") {
+          if (
+            this.currentScreen === "host" &&
+            this.remoteControlAllowed &&
+            this.websocket &&
+            this.websocket.readyState === WebSocket.OPEN
+          ) {
+            this.sendSignalingMessage({
+              type: "agent-control",
+              control: packet.action
+            });
+          }
           return;
         }
         if (packet.sender && packet.content) {
@@ -853,6 +887,7 @@ export class MyElement extends LitElement {
     this.hostSetupOpen = false;
     this.currentScreen = "host";
     this.viewerCount = 0;
+    this.queryAgentStatus();
     this.showToast("🚀 화면 공유 스트리밍이 정상 개설되었습니다!");
 
     // Register room via WebSocket signaling
@@ -1087,6 +1122,7 @@ export class MyElement extends LitElement {
       this.currentScreen = "host";
       this.viewerCount = 0;
       this.activeParticipants = [this.currentNickname];
+      this.queryAgentStatus();
 
       // 화면 공유 스트림 다시 캡처
       this.screenStream = await captureScreen();
@@ -1658,6 +1694,7 @@ export class MyElement extends LitElement {
 
   // --- Helper to clean up streams ---
   private cleanupMediaStreams() {
+    stopMediaStream(this.screenStream);
     stopMediaStream(this.micStream);
     if ((this as any).rawMicStream) {
       stopMediaStream((this as any).rawMicStream);
@@ -1669,17 +1706,23 @@ export class MyElement extends LitElement {
 
     // Disconnect and clear multi-party audio mixing nodes
     this.viewerAudioDestNodes.forEach((destNode) => {
-      try { destNode.disconnect(); } catch (e) {}
+      try {
+        destNode.disconnect();
+      } catch (e) {}
     });
     this.viewerAudioDestNodes.clear();
 
     this.hostViewerAudioSources.forEach((sourceNode) => {
-      try { sourceNode.disconnect(); } catch (e) {}
+      try {
+        sourceNode.disconnect();
+      } catch (e) {}
     });
     this.hostViewerAudioSources.clear();
 
     document.querySelectorAll("#viewer-received-audio").forEach((el) => el.remove());
     document.querySelectorAll("audio[data-viewer-id]").forEach((el) => el.remove());
+
+    this.disconnectControlAgent();
 
     if (this.pipWindow) {
       this.pipWindow.close();
@@ -2069,6 +2112,56 @@ export class MyElement extends LitElement {
                                             ? html`<i data-lucide="check" class="h-3.5 w-3.5"></i>`
                                             : ""}
                                         </button>
+                                        <!-- Divider inside dropdown -->
+                                        <div class="my-1 border-t border-slate-700/50"></div>
+                                        <button
+                                          @click=${() => {
+                                            if (this.isAgentConnected) {
+                                              this.remoteControlAllowed = !this.remoteControlAllowed;
+                                              this.showToast(
+                                                this.remoteControlAllowed
+                                                  ? "🔒 원격 제어가 승인되었습니다."
+                                                  : "🔒 원격 제어가 차단되었습니다."
+                                              );
+                                            }
+                                          }}
+                                          ?disabled=${!this.isAgentConnected}
+                                          class="${this.remoteControlAllowed
+                                            ? "text-emerald-400"
+                                            : "text-slate-300"} flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent"
+                                        >
+                                          <span>원격 제어 허용</span>
+                                          <div class="relative inline-flex items-center">
+                                            <div
+                                              class="${this.remoteControlAllowed
+                                                ? "bg-emerald-500"
+                                                : "bg-slate-700"} h-4 w-7 rounded-full transition-colors"
+                                            ></div>
+                                            <div
+                                              class="${this.remoteControlAllowed
+                                                ? "translate-x-3"
+                                                : "translate-x-0"} absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white transition-transform"
+                                            ></div>
+                                          </div>
+                                        </button>
+                                        <div class="mt-1 px-2 pb-1.5 text-left text-[10px]">
+                                          ${this.isAgentConnected
+                                            ? html`<span class="font-medium text-emerald-400"
+                                                >⚡원격 도우미 실행 중</span
+                                              >`
+                                            : html`
+                                                <span class="leading-normal text-slate-400">
+                                                  원격 도우미 미연결
+                                                  <a
+                                                    href="./LANLink_Remote_Helper.zip"
+                                                    download="LANLink_Remote_Helper.zip"
+                                                    class="ml-1 font-bold text-rose-400 underline hover:text-rose-300"
+                                                  >
+                                                    [설치하기]
+                                                  </a>
+                                                </span>
+                                              `}
+                                        </div>
                                       </div>
                                     `
                                   : ""}
@@ -2148,6 +2241,16 @@ export class MyElement extends LitElement {
                 @leave-session=${this.leaveSession}
                 @send-message=${this.onSendMessage}
                 @show-toast=${(e: CustomEvent<{ message: string }>) => this.showToast(e.detail.message)}
+                @control-action=${(e: CustomEvent<{ action: any }>) => {
+                  if (this.viewerDataChannel && this.viewerDataChannel.readyState === "open") {
+                    this.viewerDataChannel.send(
+                      JSON.stringify({
+                        type: "control-action",
+                        action: e.detail.action,
+                      })
+                    );
+                  }
+                }}
               >
                 <ll-voice .localMuted=${this.localMuted}></ll-voice>
               </ll-viewer>
@@ -2341,6 +2444,19 @@ export class MyElement extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  private queryAgentStatus() {
+    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+      this.sendSignalingMessage({
+        type: "agent-check"
+      });
+    }
+  }
+
+  private disconnectControlAgent() {
+    this.isAgentConnected = false;
+    this.remoteControlAllowed = false;
   }
 }
 

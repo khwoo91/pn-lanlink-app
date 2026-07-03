@@ -3,29 +3,42 @@
   "private": true,
   "version": "1.1.0",
   "type": "module",
+  "bin": "server/control-agent.cjs",
   "scripts": {
     "dev": "vite --host",
-    "build": "tsc && vite build",
+    "build": "npm run build:agent && npm run zip && tsc && vite build",
+    "build:agent": "pkg . -t node18-win-x64 -o public/LANLink_Helper.exe",
+    "zip": "powershell -Command \"New-Item -ItemType Directory -Path temp_zip -Force; Copy-Item public/LANLink_Helper.exe -Destination temp_zip; Compress-Archive -Path temp_zip/* -DestinationPath public/LANLink_Remote_Helper.zip -Force; Remove-Item -Path temp_zip -Recurse -Force\"",
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{ts,css,html}\" \"*.html\"",
+    "agent": "node server/control-agent.cjs",
     "gitpush": "git add . && git commit -m 'update' && git push"
   },
   "dependencies": {
+    "@nut-tree-fork/nut-js": "^4.2.6",
     "crypto-js": "^4.2.0",
     "lit": "^3.3.2",
     "lucide": "^1.21.0",
-    "socket.io-client": "^4.8.3"
+    "node-windows": "^1.0.0-beta.8",
+    "socket.io-client": "^4.8.3",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",
     "@tailwindcss/vite": "^4.3.1",
     "@types/crypto-js": "^4.2.2",
     "autoprefixer": "^10.5.0",
+    "pkg": "^5.8.1",
     "postcss": "^8.5.15",
     "prettier": "^3.8.4",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4.3.1",
     "typescript": "~6.0.2",
     "vite": "^8.0.12"
+  },
+  "pkg": {
+    "assets": [
+      "node_modules/@nut-tree-fork/libnut-win32/build/Release/**/*"
+    ]
   }
 }

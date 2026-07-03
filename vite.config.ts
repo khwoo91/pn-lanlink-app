@@ -46,25 +46,65 @@ export default defineConfig({
         });
 
         const activeRooms = new Map<string, any>(); // ip -> room
+        const activeAgents = new Map<string, any>(); // clientIp -> agentWs
 
-        function broadcast(data: any) {
+        function broadcast(data: any, senderWs?: any) {
           const str = JSON.stringify(data);
+          const senderIp = senderWs ? senderWs.clientPublicIp : null;
           if (wss.clients) {
             for (const client of wss.clients) {
-              if (client.readyState === 1) { // OPEN
-                client.send(str);
+              if (client.readyState === 1 && !(client as any).isAgent) { // OPEN and not an agent
+                if (!senderIp || 
+                    (client as any).clientPublicIp === senderIp || 
+                    senderIp === '127.0.0.1' || 
+                    (client as any).clientPublicIp === '127.0.0.1' ||
+                    (client as any).clientPublicIp === localIp ||
+                    senderIp === localIp) {
+                  client.send(str);
+                }
               }
             }
           }
         }
 
-        (wss as any).on('connection', (ws: any) => {
-          // Send server detected IP to client
+        function broadcastAgentStatus(publicIp: string, connected: boolean) {
+          const payload = JSON.stringify({
+            type: 'agent-status',
+            from: 'server',
+            to: 'client',
+            connected: connected
+          });
+          if (wss.clients) {
+            for (const client of wss.clients) {
+              if (client.readyState === 1 && !(client as any).isAgent) {
+                const cip = (client as any).clientPublicIp;
+                if (cip === publicIp || publicIp === '127.0.0.1' || cip === '127.0.0.1' || cip === localIp || publicIp === localIp) {
+                  client.send(payload);
+                }
+              }
+            }
+          }
+        }
+
+        (wss as any).on('connection', (ws: any, req: any) => {
+          let clientIp = req?.headers?.['x-forwarded-for'] || req?.socket?.remoteAddress || localIp || '127.0.0.1';
+          if (clientIp.includes(',')) {
+            clientIp = clientIp.split(',')[0].trim();
+          }
+          if (clientIp === '::1' || clientIp === '::ffff:127.0.0.1') {
+            clientIp = '127.0.0.1';
+          }
+          ws.clientPublicIp = clientIp;
+          ws.isAgent = false;
+
+          // Send initial server info with agent status to host
+          const agentExists = activeAgents.has(clientIp);
           ws.send(JSON.stringify({
             type: 'server-info',
             from: 'server',
             to: 'client',
-            ip: localIp
+            ip: clientIp,
+            agentConnected: agentExists
           }));
 
           // Send current active room list to newly connected client
@@ -79,7 +119,32 @@ export default defineConfig({
             try {
               const msg = JSON.parse(message.toString());
 
-              if (msg.type === 'room-register') {
+              // 1. Agent Registration from LANLink_Helper.exe
+              if (msg.type === 'agent-register') {
+                ws.isAgent = true;
+                activeAgents.set(ws.clientPublicIp, ws);
+                console.log(`🔌 [LANLink Dev Server] Agent registered for IP: ${ws.clientPublicIp}`);
+                broadcastAgentStatus(ws.clientPublicIp, true);
+              } 
+              // 2. Host query agent connection status
+              else if (msg.type === 'agent-check') {
+                const exists = activeAgents.has(ws.clientPublicIp);
+                ws.send(JSON.stringify({
+                  type: 'agent-status',
+                  from: 'server',
+                  to: 'client',
+                  connected: exists
+                }));
+              }
+              // 3. Relay mouse/keyboard action events to the registered agent
+              else if (msg.type === 'agent-control') {
+                const agentWs = activeAgents.get(ws.clientPublicIp);
+                if (agentWs && agentWs.readyState === 1) {
+                  agentWs.send(JSON.stringify(msg.control));
+                }
+              }
+              // 4. Room Register & Signaling messages
+              else if (msg.type === 'room-register') {
                 ws.roomIp = msg.room.ip;
                 activeRooms.set(msg.room.ip, msg.room);
                 broadcast({
@@ -87,7 +152,7 @@ export default defineConfig({
                   from: 'server',
                   to: 'all',
                   rooms: Array.from(activeRooms.values())
-                });
+                }, ws);
               }
               else if (msg.type === 'room-unregister') {
                 const targetIp = msg.ip || ws.roomIp;
@@ -100,7 +165,7 @@ export default defineConfig({
                   from: 'server',
                   to: 'all',
                   rooms: Array.from(activeRooms.values())
-                });
+                }, ws);
               }
               else if (msg.type === 'room-list-request') {
                 ws.send(JSON.stringify({
@@ -111,8 +176,7 @@ export default defineConfig({
                 }));
               }
               else {
-                // Forward WebRTC signaling (offers, answers, candidates, joins, leaves)
-                broadcast(msg);
+                broadcast(msg, ws);
               }
             } catch (e) {
               console.error('Error handling WebSocket message in server:', e);
@@ -120,6 +184,11 @@ export default defineConfig({
           });
 
           ws.on('close', () => {
+            if (ws.isAgent) {
+              activeAgents.delete(ws.clientPublicIp);
+              console.log(`❌ [LANLink Dev Server] Agent disconnected for IP: ${ws.clientPublicIp}`);
+              broadcastAgentStatus(ws.clientPublicIp, false);
+            }
             if (ws.roomIp) {
               activeRooms.delete(ws.roomIp);
               broadcast({
@@ -127,7 +196,7 @@ export default defineConfig({
                 from: 'server',
                 to: 'all',
                 rooms: Array.from(activeRooms.values())
-              });
+              }, ws);
             }
           });
         });

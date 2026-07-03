@@ -64,6 +64,7 @@ export class LlViewer extends LitElement {
   @property({ type: Boolean }) speakerMuted = false;
   @property({ type: Number }) speakerVolume = 100;
   @property({ type: Number }) micVolume = 100;
+  @property({ type: Boolean }) remoteControlActive = false;
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
@@ -127,6 +128,32 @@ export class LlViewer extends LitElement {
                       ?muted=${this.speakerMuted}
                       .volume=${this.speakerMuted ? 0 : this.speakerVolume / 100}
                     ></video>
+
+                    <!-- Remote Control Event Capturing Overlay -->
+                    ${this.remoteControlActive
+                      ? html`
+                          <div
+                            id="control-capture-overlay"
+                            tabindex="0"
+                            class="absolute inset-0 z-10 cursor-crosshair focus:outline-none bg-slate-950/0"
+                            @mousemove=${this.handleMouseMove}
+                            @mousedown=${this.handleMouseDown}
+                            @mouseup=${this.handleMouseUp}
+                            @wheel=${this.handleWheel}
+                            @keydown=${this.handleKeyDown}
+                            @keyup=${this.handleKeyUp}
+                          >
+                            <!-- Top Info Warning Banner -->
+                            <div class="pointer-events-none absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/80 px-4 py-1.5 backdrop-blur-md animate-in slide-in-from-top-4 duration-200">
+                              <span class="relative flex h-2 w-2">
+                                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                                <span class="relative inline-flex h-2 w-2 rounded-full bg-amber-500"></span>
+                              </span>
+                              <span class="font-sans text-[11px] font-bold text-slate-950">원격 제어 조작 중 (ESC 키 입력 시 해제)</span>
+                            </div>
+                          </div>
+                        `
+                      : ""}
                   `
                 : html`
                     <!-- Pulsing grey skeleton overlay when connecting -->
@@ -231,6 +258,17 @@ export class LlViewer extends LitElement {
                 <!-- Divider line -->
                 <div class="mx-0.5 h-5 w-px bg-slate-700/50"></div>
 
+                <!-- Remote Control Toggle Button -->
+                <button
+                  @click=${this.toggleRemoteControl}
+                  class="${this.remoteControlActive
+                    ? "bg-amber-500 text-slate-950 font-bold"
+                    : "bg-slate-800/40 text-slate-300 hover:bg-slate-800/80"} flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700/50 transition-colors"
+                  title="${this.remoteControlActive ? "원격 제어 끄기" : "원격 제어 켜기"}"
+                >
+                  <i data-lucide="mouse-pointer" class="h-4.5 w-4.5"></i>
+                </button>
+
                 <!-- Chat Collapse Toggle (Only visible in fullscreen) -->
                 ${this.isFullScreen
                   ? html`
@@ -334,6 +372,96 @@ export class LlViewer extends LitElement {
     this.dispatchEvent(
       new CustomEvent("change-mic-volume", {
         detail: { volume: val },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  private toggleRemoteControl() {
+    this.remoteControlActive = !this.remoteControlActive;
+    if (this.remoteControlActive) {
+      this.showToast("🎮 원격 제어 모드가 활성화되었습니다. ESC를 누르면 해제됩니다.");
+      setTimeout(() => {
+        const overlay = this.querySelector("#control-capture-overlay") as HTMLElement | null;
+        if (overlay) overlay.focus();
+      }, 50);
+    } else {
+      this.showToast("🎮 원격 제어 모드가 해제되었습니다.");
+    }
+  }
+
+  private handleMouseMove(e: MouseEvent) {
+    const el = e.currentTarget as HTMLElement;
+    const rect = el.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
+    this.sendControlAction({
+      type: "mousemove",
+      x: parseFloat(x.toFixed(4)),
+      y: parseFloat(y.toFixed(4)),
+    });
+  }
+
+  private handleMouseDown(e: MouseEvent) {
+    this.sendControlAction({
+      type: "mousedown",
+      button: e.button,
+    });
+  }
+
+  private handleMouseUp(e: MouseEvent) {
+    this.sendControlAction({
+      type: "mouseup",
+      button: e.button,
+    });
+  }
+
+  private handleWheel(e: WheelEvent) {
+    e.preventDefault();
+    this.sendControlAction({
+      type: "wheel",
+      deltaY: e.deltaY,
+    });
+  }
+
+  private handleKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      this.remoteControlActive = false;
+      this.showToast("🎮 원격 제어 모드가 해제되었습니다.");
+      return;
+    }
+    e.preventDefault();
+    this.sendControlAction({
+      type: "keydown",
+      key: e.key,
+    });
+  }
+
+  private handleKeyUp(e: KeyboardEvent) {
+    e.preventDefault();
+    this.sendControlAction({
+      type: "keyup",
+      key: e.key,
+    });
+  }
+
+  private sendControlAction(action: any) {
+    this.dispatchEvent(
+      new CustomEvent("control-action", {
+        detail: { action: action },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  private showToast(message: string) {
+    this.dispatchEvent(
+      new CustomEvent("show-toast", {
+        detail: { message: message },
         bubbles: true,
         composed: true,
       })
