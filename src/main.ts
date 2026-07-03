@@ -135,6 +135,7 @@ export class MyElement extends LitElement {
 
   // WebRTC & Signaling properties
   private websocket: WebSocket | null = null;
+  private localDirectWs: WebSocket | null = null;
   private viewerId: string = Math.random().toString(36).substring(2, 9);
   private hostConnections = new Map<string, RTCPeerConnection>();
   private hostDataChannels = new Map<string, RTCDataChannel>();
@@ -716,16 +717,15 @@ export class MyElement extends LitElement {
           return;
         }
         if (packet.type === "control-action") {
-          if (
-            this.currentScreen === "host" &&
-            this.remoteControlAllowed &&
-            this.websocket &&
-            this.websocket.readyState === WebSocket.OPEN
-          ) {
-            this.sendSignalingMessage({
-              type: "agent-control",
-              control: packet.action
-            });
+          if (this.currentScreen === "host" && this.remoteControlAllowed) {
+            if (this.localDirectWs && this.localDirectWs.readyState === WebSocket.OPEN) {
+              this.localDirectWs.send(JSON.stringify(packet.action));
+            } else if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+              this.sendSignalingMessage({
+                type: "agent-control",
+                control: packet.action
+              });
+            }
           }
           return;
         }
@@ -2452,11 +2452,42 @@ export class MyElement extends LitElement {
         type: "agent-check"
       });
     }
+    this.connectLocalDirect();
+  }
+
+  private connectLocalDirect() {
+    if (this.localDirectWs) return;
+    try {
+      const ws = new WebSocket("ws://127.0.0.1:5000");
+      ws.onopen = () => {
+        this.localDirectWs = ws;
+        console.log("⚡ [LANLink] Ultra-low latency local direct control channel established.");
+      };
+      const handleClose = () => {
+        if (this.localDirectWs === ws) {
+          this.localDirectWs = null;
+        }
+      };
+      ws.onclose = handleClose;
+      ws.onerror = handleClose;
+    } catch (e) {
+      this.localDirectWs = null;
+    }
+  }
+
+  private disconnectLocalDirect() {
+    if (this.localDirectWs) {
+      try {
+        this.localDirectWs.close();
+      } catch (e) {}
+      this.localDirectWs = null;
+    }
   }
 
   private disconnectControlAgent() {
     this.isAgentConnected = false;
     this.remoteControlAllowed = false;
+    this.disconnectLocalDirect();
   }
 }
 

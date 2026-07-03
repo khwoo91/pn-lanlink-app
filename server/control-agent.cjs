@@ -114,6 +114,64 @@ function runControlAgent() {
     'F12': Key.F12,
   };
 
+  let screenWidth = 1920;
+  let screenHeight = 1080;
+  async function updateScreenSize() {
+    try {
+      screenWidth = await screen.width();
+      screenHeight = await screen.height();
+      console.log(`💻 Screen resolution detected: ${screenWidth}x${screenHeight}`);
+    } catch (e) {
+      console.warn('Failed to retrieve screen resolution, fallback to 1920x1080:', e.message);
+      screenWidth = 1920;
+      screenHeight = 1080;
+    }
+  }
+  updateScreenSize();
+
+  async function executeAction(data) {
+    try {
+      if (data.type === 'mousemove') {
+        const targetX = Math.round(data.x * screenWidth);
+        const targetY = Math.round(data.y * screenHeight);
+        await mouse.setPosition(new Point(targetX, targetY));
+      } 
+      else if (data.type === 'mousedown') {
+        const btn = data.button === 2 ? Button.RIGHT : data.button === 1 ? Button.MIDDLE : Button.LEFT;
+        await mouse.pressButton(btn);
+      } 
+      else if (data.type === 'mouseup') {
+        const btn = data.button === 2 ? Button.RIGHT : data.button === 1 ? Button.MIDDLE : Button.LEFT;
+        await mouse.releaseButton(btn);
+      }
+      else if (data.type === 'wheel') {
+        const amount = Math.max(1, Math.round(Math.abs(data.deltaY) / 100));
+        if (data.deltaY > 0) {
+          await mouse.scrollDown(amount);
+        } else {
+          await mouse.scrollUp(amount);
+        }
+      }
+      else if (data.type === 'keydown') {
+        const mappedKey = KEY_MAP[data.key];
+        if (mappedKey !== undefined) {
+          await keyboard.pressKey(mappedKey);
+        } else if (data.key.length === 1) {
+          await keyboard.type(data.key);
+        }
+      }
+      else if (data.type === 'keyup') {
+        const mappedKey = KEY_MAP[data.key];
+        if (mappedKey !== undefined) {
+          await keyboard.releaseKey(mappedKey);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to execute control action in agent:', e);
+    }
+  }
+
+  // 1. Centralized Outbound Signaling connection
   function connectToSignaling() {
     if (currentWs) return;
 
@@ -122,68 +180,20 @@ function runControlAgent() {
     
     const ws = new WebSocket(url);
 
-    ws.on('open', async () => {
+    ws.on('open', () => {
       currentWs = ws;
       console.log(`🔌 [LANLink Helper] Connected successfully to signaling server: ${url}`);
       
-      // Register as an active agent
       ws.send(JSON.stringify({
         type: 'agent-register',
         from: 'agent'
       }));
 
-      let screenWidth = 1920;
-      let screenHeight = 1080;
-      try {
-        screenWidth = await screen.width();
-        screenHeight = await screen.height();
-        console.log(`💻 Screen resolution detected: ${screenWidth}x${screenHeight}`);
-      } catch (err) {
-        console.warn('Failed to retrieve screen resolution, fallback to 1920x1080:', err);
-      }
-
       ws.on('message', async (message) => {
         try {
           const data = JSON.parse(message.toString());
-
-          if (data.type === 'mousemove') {
-            const targetX = Math.round(data.x * screenWidth);
-            const targetY = Math.round(data.y * screenHeight);
-            await mouse.setPosition(new Point(targetX, targetY));
-          } 
-          else if (data.type === 'mousedown') {
-            const btn = data.button === 2 ? Button.RIGHT : data.button === 1 ? Button.MIDDLE : Button.LEFT;
-            await mouse.pressButton(btn);
-          } 
-          else if (data.type === 'mouseup') {
-            const btn = data.button === 2 ? Button.RIGHT : data.button === 1 ? Button.MIDDLE : Button.LEFT;
-            await mouse.releaseButton(btn);
-          }
-          else if (data.type === 'wheel') {
-            const amount = Math.max(1, Math.round(Math.abs(data.deltaY) / 100));
-            if (data.deltaY > 0) {
-              await mouse.scrollDown(amount);
-            } else {
-              await mouse.scrollUp(amount);
-            }
-          }
-          else if (data.type === 'keydown') {
-            const mappedKey = KEY_MAP[data.key];
-            if (mappedKey !== undefined) {
-              await keyboard.pressKey(mappedKey);
-            } else if (data.key.length === 1) {
-              await keyboard.type(data.key);
-            }
-          }
-          else if (data.type === 'keyup') {
-            const mappedKey = KEY_MAP[data.key];
-            if (mappedKey !== undefined) {
-              await keyboard.releaseKey(mappedKey);
-            }
-          }
-        } catch (e) {
-          console.error('Failed to execute control action in agent:', e);
-        }
+          await executeAction(data);
+        } catch (err) {}
       });
     });
 
@@ -194,7 +204,6 @@ function runControlAgent() {
         currentWs = null;
       }
       
-      // Cycle to the next fallback url
       urlIndex = (urlIndex + 1) % targetUrls.length;
 
       if (!reconnectTimer) {
@@ -209,6 +218,29 @@ function runControlAgent() {
     ws.on('close', handleFailure);
   }
 
-  // Kickoff the initial connection chain
   connectToSignaling();
+
+  // 2. Parallel Local Loopback Server (ultra-low latency 0ms path)
+  try {
+    const { WebSocketServer } = WebSocket;
+    const localWss = new WebSocketServer({ port: 5000 });
+    console.log('⚡ [LANLink Helper] Local direct socket server listening on ws://127.0.0.1:5000');
+    
+    localWss.on('connection', (localWs) => {
+      console.log('🔌 [LANLink Helper] Local direct control channel connected.');
+      
+      localWs.on('message', async (message) => {
+        try {
+          const data = JSON.parse(message.toString());
+          await executeAction(data);
+        } catch (err) {}
+      });
+
+      localWs.on('close', () => {
+        console.log('❌ [LANLink Helper] Local direct control channel disconnected.');
+      });
+    });
+  } catch (err) {
+    console.warn('⚠️ [LANLink Helper] Failed to start local 5000 server (might be occupied):', err.message);
+  }
 }
