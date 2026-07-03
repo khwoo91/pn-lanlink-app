@@ -65,6 +65,7 @@ export class LlViewer extends LitElement {
   @property({ type: Number }) speakerVolume = 100;
   @property({ type: Number }) micVolume = 100;
   @property({ type: Boolean }) remoteControlActive = false;
+  @property({ type: String }) remoteControlRequestStatus = 'none';
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
@@ -261,12 +262,20 @@ export class LlViewer extends LitElement {
                 <!-- Remote Control Toggle Button -->
                 <button
                   @click=${this.toggleRemoteControl}
-                  class="${this.remoteControlActive
-                    ? "bg-amber-500 text-slate-950 font-bold"
+                  class="${this.remoteControlRequestStatus === 'approved' && this.remoteControlActive
+                    ? "bg-emerald-500 text-slate-950 font-bold"
+                    : this.remoteControlRequestStatus === 'pending'
+                    ? "bg-amber-500/20 text-amber-400 font-bold border-amber-500/30 animate-pulse"
                     : "bg-slate-800/40 text-slate-300 hover:bg-slate-800/80"} flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700/50 transition-colors"
-                  title="${this.remoteControlActive ? "원격 제어 끄기" : "원격 제어 켜기"}"
+                  title="${this.remoteControlRequestStatus === 'approved'
+                    ? (this.remoteControlActive ? '원격 제어 끄기' : '원격 제어 켜기')
+                    : this.remoteControlRequestStatus === 'pending'
+                    ? '원격 제어 승인 대기 중...'
+                    : '원격 제어 요청하기'}"
                 >
-                  <i data-lucide="mouse-pointer" class="h-4.5 w-4.5"></i>
+                  ${this.remoteControlRequestStatus === 'pending'
+                    ? html`<div class="h-4.5 w-4.5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></div>`
+                    : html`<i data-lucide="mouse-pointer" class="h-4.5 w-4.5"></i>`}
                 </button>
 
                 <!-- Chat Collapse Toggle (Only visible in fullscreen) -->
@@ -379,6 +388,16 @@ export class LlViewer extends LitElement {
   }
 
   private toggleRemoteControl() {
+    if (this.remoteControlRequestStatus === 'none' || this.remoteControlRequestStatus === 'rejected') {
+      this.dispatchEvent(new CustomEvent('request-remote-control', { bubbles: true, composed: true }));
+      return;
+    }
+
+    if (this.remoteControlRequestStatus === 'pending') {
+      this.showToast("⏳ 호스트의 승인을 기다리는 중입니다.");
+      return;
+    }
+
     this.remoteControlActive = !this.remoteControlActive;
     if (this.remoteControlActive) {
       this.showToast("🎮 원격 제어 모드가 활성화되었습니다. ESC를 누르면 해제됩니다.");

@@ -147,6 +147,13 @@ export class MyElement extends LitElement {
   @state() protected activeStream: MediaStream | null = null;
   private targetRoomPasswordHash: string = "";
 
+  // Remote Control approval properties
+  @state() private remoteControlRequestStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
+  @state() private approvedViewerId: string | null = null;
+  @state() private approvedViewerNickname: string = '';
+  @state() private incomingControlRequest: { from: string; nickname: string } | null = null;
+  @state() private controlRequestModalOpen: boolean = false;
+
   // PiP 및 Fallback 팝업 상태 보존용
   private pipWindow: Window | null = null;
   private pipFallbackWindow: Window | null = null;
@@ -716,8 +723,29 @@ export class MyElement extends LitElement {
           this.viewerCount = packet.list.length - 1;
           return;
         }
+        if (packet.type === "remote-control-request") {
+          if (this.currentScreen === "host") {
+            this.incomingControlRequest = { from: packet.from, nickname: packet.nickname };
+            this.controlRequestModalOpen = true;
+          }
+          return;
+        }
+        if (packet.type === "remote-control-response") {
+          if (this.currentScreen === "viewer") {
+            if (packet.approved) {
+              this.remoteControlRequestStatus = 'approved';
+              this.remoteControlAllowed = true;
+              this.showToast("⚡ 원격 제어 요청이 수락되었습니다! 이제 화면을 조작할 수 있습니다.");
+            } else {
+              this.remoteControlRequestStatus = 'rejected';
+              this.remoteControlAllowed = false;
+              this.showToast("❌ 원격 제어 요청이 거절되었습니다.");
+            }
+          }
+          return;
+        }
         if (packet.type === "control-action") {
-          if (this.currentScreen === "host" && this.remoteControlAllowed) {
+          if (this.currentScreen === "host" && this.remoteControlAllowed && packet.sender === this.approvedViewerId) {
             if (this.localDirectWs && this.localDirectWs.readyState === WebSocket.OPEN) {
               this.localDirectWs.send(JSON.stringify(packet.action));
             } else if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
@@ -2146,9 +2174,14 @@ export class MyElement extends LitElement {
                                         </button>
                                         <div class="mt-1 px-2 pb-1.5 text-left text-[10px]">
                                           ${this.isAgentConnected
-                                            ? html`<span class="font-medium text-emerald-400"
-                                                >⚡원격 도우미 실행 중</span
-                                              >`
+                                            ? html`
+                                                <div class="flex flex-col gap-0.5">
+                                                  <span class="font-medium text-emerald-400">⚡원격 도우미 실행 중</span>
+                                                  ${this.approvedViewerNickname
+                                                    ? html`<span class="text-blue-400 font-semibold">👤 제어 중: ${this.approvedViewerNickname}</span>`
+                                                    : html`<span class="text-slate-400">👤 제어 참여자 없음</span>`}
+                                                </div>
+                                              `
                                             : html`
                                                 <span class="leading-normal text-slate-400">
                                                   원격 도우미 미연결
@@ -2229,6 +2262,7 @@ export class MyElement extends LitElement {
                 .participants=${this.activeParticipants}
                 .stream=${this.activeStream}
                 .myNickname=${this.currentNickname}
+                .remoteControlRequestStatus=${this.remoteControlRequestStatus}
                 @toggle-mute=${this.toggleLocalMute}
                 @toggle-speaker=${this.toggleSpeakerMute}
                 @change-speaker-volume=${this.handleSpeakerVolumeChange}
@@ -2241,12 +2275,14 @@ export class MyElement extends LitElement {
                 @leave-session=${this.leaveSession}
                 @send-message=${this.onSendMessage}
                 @show-toast=${(e: CustomEvent<{ message: string }>) => this.showToast(e.detail.message)}
+                @request-remote-control=${this.sendRemoteControlRequest}
                 @control-action=${(e: CustomEvent<{ action: any }>) => {
                   if (this.viewerDataChannel && this.viewerDataChannel.readyState === "open") {
                     this.viewerDataChannel.send(
                       JSON.stringify({
                         type: "control-action",
                         action: e.detail.action,
+                        sender: this.viewerId,
                       })
                     );
                   }
@@ -2289,7 +2325,7 @@ export class MyElement extends LitElement {
         @stop-session=${this.triggerImmediateStop}
       ></modal-saver>
 
-      ${this.renderProModal()} ${this.renderToast()} ${this.renderAlertModal()}
+      ${this.renderProModal()} ${this.renderToast()} ${this.renderAlertModal()} ${this.renderControlRequestModal()}
     `;
   }
 
@@ -2444,6 +2480,100 @@ export class MyElement extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  private renderControlRequestModal() {
+    return html`
+      <div
+        id="control-request-modal"
+        class="${this.controlRequestModalOpen ? "" : "hidden"} fixed inset-0 z-100 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+      >
+        <div
+          class="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+        >
+          <h3 class="text-center text-xl font-bold text-slate-800 dark:text-white">🖥️ 원격 제어 요청</h3>
+          <p class="mt-3 text-center text-sm leading-relaxed font-semibold text-slate-700 dark:text-slate-300">
+            <span class="text-blue-500 font-bold">${this.incomingControlRequest?.nickname || "참여자"}</span> 님이 화면 원격 제어를 요청하셨습니다.
+          </p>
+          <p class="mt-1 text-center text-xs text-slate-400 dark:text-slate-500">
+            수락하면 해당 참여자가 내 화면을 마우스/키보드로 직접 조작할 수 있습니다.
+          </p>
+
+          <div class="mt-6 flex gap-3">
+            <button
+              @click=${this.handleRejectControlRequest}
+              class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-white rounded-xl py-2.5 text-xs font-bold transition"
+            >
+              거절
+            </button>
+            <button
+              @click=${this.handleAcceptControlRequest}
+              class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl py-2.5 text-xs font-bold transition"
+            >
+              수락
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private handleAcceptControlRequest() {
+    if (!this.incomingControlRequest) return;
+    const { from, nickname } = this.incomingControlRequest;
+    this.approvedViewerId = from;
+    this.approvedViewerNickname = nickname;
+    this.controlRequestModalOpen = false;
+
+    // Send remote-control-response to matching peer and disable others
+    this.hostDataChannels.forEach((channel, peerId) => {
+      if (peerId === from && channel.readyState === "open") {
+        channel.send(JSON.stringify({
+          type: "remote-control-response",
+          approved: true
+        }));
+      } else if (peerId !== from && channel.readyState === "open") {
+        channel.send(JSON.stringify({
+          type: "remote-control-response",
+          approved: false
+        }));
+      }
+    });
+
+    this.showToast(`🟢 [${nickname}] 님에게 원격 제어 권한을 부여했습니다.`);
+    this.incomingControlRequest = null;
+  }
+
+  private handleRejectControlRequest() {
+    if (!this.incomingControlRequest) return;
+    const { from, nickname } = this.incomingControlRequest;
+    this.controlRequestModalOpen = false;
+
+    this.hostDataChannels.forEach((channel, peerId) => {
+      if (peerId === from && channel.readyState === "open") {
+        channel.send(JSON.stringify({
+          type: "remote-control-response",
+          approved: false
+        }));
+      }
+    });
+
+    this.showToast(`🔴 [${nickname}] 님의 원격 제어 요청을 거절했습니다.`);
+    this.incomingControlRequest = null;
+  }
+
+  private sendRemoteControlRequest() {
+    if (this.currentScreen !== "viewer" || !this.viewerDataChannel || this.viewerDataChannel.readyState !== "open") {
+      this.showToast("⚠️ 아직 방에 연결되지 않았거나 제어 채널이 닫혀 있습니다.");
+      return;
+    }
+    this.remoteControlRequestStatus = 'pending';
+    this.viewerDataChannel.send(JSON.stringify({
+      type: "remote-control-request",
+      from: this.viewerId,
+      nickname: this.currentNickname
+    }));
+    this.showToast("⏳ 호스트에게 원격 제어 수락을 요청했습니다. 대기하는 중...");
   }
 
   private queryAgentStatus() {
