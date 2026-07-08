@@ -7,7 +7,7 @@ export const setTheme = (theme: string): void => {
 };
 
 export const getNickname = (): string => {
-  return localStorage.getItem("lanlink_guest_name") || "참여자";
+  return localStorage.getItem("lanlink_guest_name") || "게스트";
 };
 
 export const setNickname = (nickname: string): void => {

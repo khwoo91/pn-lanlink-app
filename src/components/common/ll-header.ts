@@ -35,7 +35,7 @@ export class LlHeader extends LitElement {
     return this;
   }
 
-  @property({ type: String }) currentNickname = "참여자";
+  @property({ type: String }) currentNickname = "게스트";
   @property({ type: String }) currentTheme = "light";
   @property({ type: Boolean }) isSignalingConnected = false;
 
@@ -54,7 +54,7 @@ export class LlHeader extends LitElement {
               <span class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">LANLink</span>
               <span
                 class="hidden rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 sm:inline dark:border-slate-700 dark:bg-slate-800"
-                >v1.3.13</span
+                >v1.3.14</span
               >
               <span class="hidden text-[11px] font-medium text-slate-500 sm:inline">다이렉트 화면공유 및 제어</span>
             </div>

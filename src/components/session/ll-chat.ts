@@ -37,7 +37,7 @@ export class LlChat extends LitElement {
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
-  @property({ type: String }) myNickname = "참여자";
+  @property({ type: String }) myNickname = "게스트";
 
   @query("#chat-input-field") chatInputElement?: HTMLInputElement;
 
@@ -85,11 +85,11 @@ export class LlChat extends LitElement {
             </div>
           </div>
 
-          <!-- 실시간 참여자 목록 노출 -->
+          <!-- 실시간 게스트 목록 노출 -->
           ${this.participants.length > 0
             ? html`
                 <div class="flex items-center gap-1 truncate text-[10px] text-slate-400 dark:text-slate-500">
-                  <span class="shrink-0 font-bold text-slate-500">참여 인원:</span>
+                  <span class="shrink-0 font-bold text-slate-500">게스트 목록:</span>
                   <span class="truncate">${this.participants.join(", ")}</span>
                 </div>
               `

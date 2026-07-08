@@ -63,6 +63,7 @@ wss.on('connection', (ws, req) => {
     clientIp = '127.0.0.1';
   }
 
+  ws.id = Math.random().toString(36).substring(2, 9);
   ws.clientPublicIp = clientIp;
   ws.isAgent = false;
 
@@ -110,14 +111,11 @@ wss.on('connection', (ws, req) => {
       else if (msg.type === 'room-register') {
         ws.roomIp = msg.room.ip;
         msg.room.publicIp = ws.clientPublicIp;
-        activeRooms.set(msg.room.ip, msg.room);
+        activeRooms.set(ws.id, msg.room);
         broadcastRoomList();
       } 
       else if (msg.type === 'room-unregister') {
-        const targetIp = msg.ip || ws.roomIp;
-        if (targetIp) {
-          activeRooms.delete(targetIp);
-        }
+        activeRooms.delete(ws.id);
         ws.roomIp = undefined;
         broadcastRoomList();
       }
@@ -138,8 +136,8 @@ wss.on('connection', (ws, req) => {
       console.log(`❌ [LANLink Server] Agent disconnected for IP: ${ws.clientPublicIp}`);
       broadcastAgentStatus(ws.clientPublicIp, false);
     }
-    if (ws.roomIp) {
-      activeRooms.delete(ws.roomIp);
+    if (activeRooms.has(ws.id)) {
+      activeRooms.delete(ws.id);
       broadcastRoomList();
     }
   });

@@ -68,7 +68,7 @@ export class MyElement extends LitElement {
   @state() private hostPasswordHash: string = hashPassword("");
   @state() private hasSavedHostSession: boolean = false;
   @state() private savedHostRoomCode: string = "";
-  @state() private currentNickname: string = "참여자";
+  @state() private currentNickname: string = "게스트";
   @state() private currentTheme: string = "light";
   @state() private carouselIndex: number = 0;
   @state() private viewerCount: number = 0;
@@ -165,7 +165,7 @@ export class MyElement extends LitElement {
     // Load local storage states via storage utility
     this.currentTheme = getTheme();
     this.applyTheme(this.currentTheme);
-    this.currentNickname = getNickname() || "참여자";
+    this.currentNickname = getNickname() || "게스트";
 
     const myCreatedRoomCode = localStorage.getItem("my_created_room_code");
     if (myCreatedRoomCode) {
@@ -224,7 +224,7 @@ export class MyElement extends LitElement {
       clearTimeout(this.toastTimeout);
     }
     if (this.currentScreen === "host") {
-      this.sendSignalingMessage({ type: "room-unregister", ip: this.serverDetectedIp || window.location.hostname });
+      this.sendSignalingMessage({ type: "room-unregister" });
       this.sendSignalingMessage({ type: "leave", from: "host", to: "all" });
     } else if (this.currentScreen === "viewer") {
       this.sendSignalingMessage({ type: "leave", from: this.viewerId, to: "host" });
@@ -426,7 +426,7 @@ export class MyElement extends LitElement {
     };
 
     this.hostConnections.set(viewerId, pc);
-    this.hostViewerNicknames.set(viewerId, nickname || "참여자");
+    this.hostViewerNicknames.set(viewerId, nickname || "게스트");
     this.updateParticipants();
 
     if (this.screenStream) {
@@ -563,7 +563,7 @@ export class MyElement extends LitElement {
       sdp: updatedOffer,
     });
 
-    this.showToast(`👥 [${nickname || "참여자"}] 님이 P2P 연결을 수집하고 있습니다.`);
+    this.showToast(`👥 [${nickname || "게스트"}] 님이 P2P 연결을 수집하고 있습니다.`);
   }
 
   private async handleAnswer(viewerId: string, sdp: any) {
@@ -662,7 +662,7 @@ export class MyElement extends LitElement {
 
   private handlePeerLeave(from: string) {
     if (this.currentScreen === "host") {
-      const nickname = this.hostViewerNicknames.get(from) || "참여자";
+      const nickname = this.hostViewerNicknames.get(from) || "게스트";
       const systemMsg = {
         sender: "System",
         content: `📢 [${nickname}] 님이 퇴장하셨습니다.`,
@@ -726,7 +726,7 @@ export class MyElement extends LitElement {
       if (this.currentScreen === "host") {
         this.updateParticipants();
         
-        const nickname = this.hostViewerNicknames.get(_remotePeerId) || "참여자";
+        const nickname = this.hostViewerNicknames.get(_remotePeerId) || "게스트";
         const systemMsg = {
           sender: "System",
           content: `📢 [${nickname}] 님이 입장하셨습니다.`,
@@ -769,6 +769,19 @@ export class MyElement extends LitElement {
         }
         if (packet.type === "remote-control-request") {
           if (this.currentScreen === "host") {
+            if (!this.remoteControlAllowed) {
+              const dc = this.hostDataChannels.get(packet.from);
+              if (dc && dc.readyState === "open") {
+                dc.send(
+                  JSON.stringify({
+                    type: "remote-control-response",
+                    approved: false,
+                    reason: "host-disabled",
+                  })
+                );
+              }
+              return;
+            }
             this.incomingControlRequest = { from: packet.from, nickname: packet.nickname };
             this.controlRequestModalOpen = true;
           }
@@ -783,7 +796,11 @@ export class MyElement extends LitElement {
             } else {
               this.remoteControlRequestStatus = "rejected";
               this.remoteControlAllowed = false;
-              this.showToast("❌ 원격 제어 요청이 거절되었습니다.");
+              if (packet.reason === "host-disabled") {
+                this.showToast("❌ 호스트가 원격 제어 허용을 비활성화한 상태입니다.");
+              } else {
+                this.showToast("❌ 원격 제어 요청이 거절되었습니다.");
+              }
             }
           }
           return;
@@ -1032,7 +1049,6 @@ export class MyElement extends LitElement {
       type: "room-unregister",
       from: "host",
       to: "server",
-      ip: this.serverDetectedIp || window.location.hostname,
     });
   }
 
@@ -2217,6 +2233,24 @@ export class MyElement extends LitElement {
                                           @click=${() => {
                                             if (this.isAgentConnected) {
                                               this.remoteControlAllowed = !this.remoteControlAllowed;
+                                              
+                                              if (!this.remoteControlAllowed) {
+                                                if (this.approvedViewerId) {
+                                                  const dc = this.hostDataChannels.get(this.approvedViewerId);
+                                                  if (dc && dc.readyState === "open") {
+                                                    dc.send(
+                                                      JSON.stringify({
+                                                        type: "remote-control-response",
+                                                        approved: false,
+                                                        reason: "host-disabled",
+                                                      })
+                                                    );
+                                                  }
+                                                  this.approvedViewerId = null;
+                                                  this.approvedViewerNickname = "";
+                                                }
+                                              }
+
                                               this.showToast(
                                                 this.remoteControlAllowed
                                                   ? "🔒 원격 제어가 승인되었습니다."
@@ -2254,7 +2288,7 @@ export class MyElement extends LitElement {
                                                     ? html`<span class="font-semibold text-blue-400"
                                                         >👤 제어 중: ${this.approvedViewerNickname}</span
                                                       >`
-                                                    : html`<span class="text-slate-400">👤 제어 참여자 없음</span>`}
+                                                    : html`<span class="text-slate-400">👤 제어 게스트 없음</span>`}
                                                 </div>
                                               `
                                             : html`
@@ -2570,11 +2604,11 @@ export class MyElement extends LitElement {
         >
           <h3 class="text-center text-xl font-bold text-slate-800 dark:text-white">🖥️ 원격 제어 요청</h3>
           <p class="mt-3 text-center text-sm leading-relaxed font-semibold text-slate-700 dark:text-slate-300">
-            <span class="font-bold text-blue-500">${this.incomingControlRequest?.nickname || "참여자"}</span> 님이 화면
+            <span class="font-bold text-blue-500">${this.incomingControlRequest?.nickname || "게스트"}</span> 님이 화면
             원격 제어를 요청하셨습니다.
           </p>
           <p class="mt-1 text-center text-xs text-slate-400 dark:text-slate-500">
-            수락하면 해당 참여자가 내 화면을 마우스/키보드로 직접 조작할 수 있습니다.
+            수락하면 해당 게스트가 내 화면을 마우스/키보드로 직접 조작할 수 있습니다.
           </p>
 
           <div class="mt-6 flex gap-3">

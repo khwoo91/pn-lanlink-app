@@ -69,7 +69,7 @@ export class LlViewer extends LitElement {
   @property({ type: Array }) chatMessages: Array<{ sender: string; content: string; system?: boolean }> = [];
   @property({ type: Number }) viewerCount = 0;
   @property({ type: Array }) participants: string[] = [];
-  @property({ type: String }) myNickname = "참여자";
+  @property({ type: String }) myNickname = "게스트";
 
   @property({ attribute: false }) stream: MediaStream | null = null;
 
