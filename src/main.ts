@@ -759,6 +759,22 @@ export class MyElement extends LitElement {
         }
         if (packet.sender && packet.content) {
           this.chatMessages = [...this.chatMessages, { sender: packet.sender, content: packet.content }];
+          
+          // Relay chat message to all other connected viewers
+          if (this.currentScreen === "host") {
+            this.hostDataChannels.forEach((channel, peerId) => {
+              if (peerId !== _remotePeerId && channel.readyState === "open") {
+                channel.send(
+                  JSON.stringify({
+                    sender: packet.sender,
+                    content: packet.content,
+                    timestamp: packet.timestamp || Date.now(),
+                  })
+                );
+              }
+            });
+          }
+
           setTimeout(() => {
             const chatBox = document.getElementById("chat-messages-box");
             if (chatBox) {
