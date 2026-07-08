@@ -802,7 +802,14 @@ export class MyElement extends LitElement {
           return;
         }
         if (packet.sender && packet.content) {
-          this.chatMessages = [...this.chatMessages, { sender: packet.sender, content: packet.content }];
+          this.chatMessages = [
+            ...this.chatMessages,
+            {
+              sender: packet.sender,
+              content: packet.content,
+              system: packet.system,
+            },
+          ];
           
           // Relay chat message to all other connected viewers
           if (this.currentScreen === "host") {
@@ -812,6 +819,7 @@ export class MyElement extends LitElement {
                   JSON.stringify({
                     sender: packet.sender,
                     content: packet.content,
+                    system: packet.system,
                     timestamp: packet.timestamp || Date.now(),
                   })
                 );

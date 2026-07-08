@@ -106,10 +106,12 @@ export class LlChat extends LitElement {
           ${this.chatMessages.map((msg) => {
             if (msg.system) {
               return html`
-                <div
-                  class="border-google-blue/10 rounded-lg border bg-blue-50/50 p-2.5 text-xs leading-relaxed text-slate-500 dark:bg-blue-950/20"
-                >
-                  ${msg.content}
+                <div class="flex w-full justify-center my-1 select-none">
+                  <div
+                    class="rounded-full bg-slate-100 dark:bg-slate-900/60 px-4 py-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 text-center leading-normal"
+                  >
+                    ${msg.content}
+                  </div>
                 </div>
               `;
             }
@@ -181,12 +183,11 @@ export class LlChat extends LitElement {
     this.dispatchEvent(new CustomEvent("toggle-pip", { bubbles: true, composed: true }));
   }
 
-  private scrollToBottom() {
+  private async scrollToBottom() {
+    await this.updateComplete;
     const box = this.querySelector("#chat-messages-box");
     if (box) {
-      setTimeout(() => {
-        box.scrollTop = box.scrollHeight;
-      }, 50);
+      box.scrollTop = box.scrollHeight;
     }
   }
 }
