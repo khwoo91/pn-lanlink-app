@@ -116,26 +116,78 @@ function runControlAgent() {
     'F12': Key.F12,
   };
 
-  let screenWidth = 1920;
-  let screenHeight = 1080;
-  async function updateScreenSize() {
+  let screensList = [];
+  let sharedBounds = { X: 0, Y: 0, Width: 1920, Height: 1080 };
+
+  function loadDisplaysInfo() {
     try {
-      screenWidth = await screen.width();
-      screenHeight = await screen.height();
-      console.log(`💻 Screen resolution detected: ${screenWidth}x${screenHeight}`);
+      const psCmd = `powershell -Command "[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.Screen]::AllScreens | Select-Object -Property DeviceName, Primary, @{N='X';E={$_.Bounds.X}}, @{N='Y';E={$_.Bounds.Y}}, @{N='Width';E={$_.Bounds.Width}}, @{N='Height';E={$_.Bounds.Height}} | ConvertTo-Json -Compress"`;
+      const output = execSync(psCmd, { encoding: 'utf8' }).trim();
+      if (output) {
+        const parsed = JSON.parse(output);
+        screensList = Array.isArray(parsed) ? parsed : [parsed];
+        console.log('💻 Connected monitors detected:', JSON.stringify(screensList, null, 2));
+      }
     } catch (e) {
-      console.warn('Failed to retrieve screen resolution, fallback to 1920x1080:', e.message);
-      screenWidth = 1920;
-      screenHeight = 1080;
+      console.warn('⚠️ Failed to load detailed display info via PowerShell:', e.message);
     }
   }
-  updateScreenSize();
+  loadDisplaysInfo();
+
+  async function initSharedBounds() {
+    try {
+      const w = await screen.width();
+      const h = await screen.height();
+      const primary = screensList.find(s => s.Primary === true);
+      if (primary) {
+        sharedBounds = {
+          X: primary.X,
+          Y: primary.Y,
+          Width: primary.Width,
+          Height: primary.Height
+        };
+      } else {
+        sharedBounds = { X: 0, Y: 0, Width: w, Height: h };
+      }
+      console.log('🎯 Initialized remote control bounds:', sharedBounds);
+    } catch (e) {
+      console.warn('Failed to initialize shared bounds:', e.message);
+    }
+  }
+  initSharedBounds();
 
   async function executeAction(data) {
     try {
+      if (data.type === 'set-shared-bounds') {
+        const w = data.width;
+        const h = data.height;
+        console.log(`📡 Requested control bounds change for sharing dimensions: ${w}x${h}`);
+        loadDisplaysInfo();
+        const matched = screensList.find(s => s.Width === w && s.Height === h);
+        if (matched) {
+          sharedBounds = {
+            X: matched.X,
+            Y: matched.Y,
+            Width: matched.Width,
+            Height: matched.Height
+          };
+          console.log(`✅ Auto-matched sharing to monitor: ${matched.DeviceName} (${sharedBounds.Width}x${sharedBounds.Height} at ${sharedBounds.X},${sharedBounds.Y})`);
+        } else {
+          const primary = screensList.find(s => s.Primary === true);
+          sharedBounds = {
+            X: primary ? primary.X : 0,
+            Y: primary ? primary.Y : 0,
+            Width: w,
+            Height: h
+          };
+          console.log(`⚠️ No physical monitor matched exact size ${w}x${h}. Fallback bounds:`, sharedBounds);
+        }
+        return;
+      }
+
       if (data.type === 'mousemove') {
-        const targetX = Math.round(data.x * screenWidth);
-        const targetY = Math.round(data.y * screenHeight);
+        const targetX = sharedBounds.X + Math.round(data.x * sharedBounds.Width);
+        const targetY = sharedBounds.Y + Math.round(data.y * sharedBounds.Height);
         await mouse.setPosition(new Point(targetX, targetY));
       } 
       else if (data.type === 'mousedown') {

@@ -910,6 +910,7 @@ export class MyElement extends LitElement {
     this.screenStream = await captureScreen();
     if (this.screenStream) {
       await this.applyQualityPreset(this.screenQualityPreset);
+      this.syncSharedBoundsToAgent();
     }
 
     this.hostSetupOpen = false;
@@ -983,6 +984,7 @@ export class MyElement extends LitElement {
     }
     this.screenStream = stream;
     await this.applyQualityPreset(this.screenQualityPreset);
+    this.syncSharedBoundsToAgent();
 
     // 2. 방장 설정 상태 복원
     this.activeRoomCode = myCreatedRoomCode;
@@ -1033,6 +1035,7 @@ export class MyElement extends LitElement {
 
       this.screenStream = newStream;
       await this.applyQualityPreset(this.screenQualityPreset);
+      this.syncSharedBoundsToAgent();
 
       const videoTrack = newStream.getVideoTracks()[0];
       this.hostConnections.forEach((pc) => {
@@ -2592,6 +2595,7 @@ export class MyElement extends LitElement {
       ws.onopen = () => {
         this.localDirectWs = ws;
         console.log("⚡ [LANLink] Ultra-low latency local direct control channel established.");
+        this.syncSharedBoundsToAgent();
       };
       const handleClose = () => {
         if (this.localDirectWs === ws) {
@@ -2618,6 +2622,33 @@ export class MyElement extends LitElement {
     this.isAgentConnected = false;
     this.remoteControlAllowed = false;
     this.disconnectLocalDirect();
+  }
+
+  private syncSharedBoundsToAgent() {
+    if (!this.screenStream) return;
+    const videoTrack = this.screenStream.getVideoTracks()[0];
+    if (!videoTrack) return;
+    
+    const settings = videoTrack.getSettings();
+    const width = settings.width || 1920;
+    const height = settings.height || 1080;
+    
+    console.log(`[LANLink] Sending shared bounds to agent: ${width}x${height}`);
+    
+    const boundsMsg = {
+      type: "set-shared-bounds",
+      width: width,
+      height: height
+    };
+    
+    if (this.localDirectWs && this.localDirectWs.readyState === WebSocket.OPEN) {
+      this.localDirectWs.send(JSON.stringify(boundsMsg));
+    } else if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+      this.sendSignalingMessage({
+        type: "agent-control",
+        control: boundsMsg
+      });
+    }
   }
 }
 
