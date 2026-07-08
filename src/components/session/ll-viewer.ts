@@ -136,7 +136,7 @@ export class LlViewer extends LitElement {
                           <div
                             id="control-capture-overlay"
                             tabindex="0"
-                            class="absolute inset-0 z-10 cursor-crosshair focus:outline-none bg-slate-950/0"
+                            class="absolute inset-0 z-10 cursor-none focus:outline-none bg-slate-950/0"
                             @mousemove=${this.handleMouseMove}
                             @mousedown=${this.handleMouseDown}
                             @mouseup=${this.handleMouseUp}

@@ -81,7 +81,7 @@ export class MyElement extends LitElement {
   @state() private pendingRoomJoinCode: string = "";
   @state() private pendingRoomJoinIp: string = "";
   @state() private isSignalingConnected: boolean = false;
-  @state() private screenQualityPreset: "FHD" | "HD" | "SD" = "HD";
+  @state() private screenQualityPreset: "FHD" | "HD" | "SD" = "FHD";
   @state() private qualityDropdownOpen: boolean = false;
   @state() private remoteControlAllowed: boolean = false;
   @state() private isAgentConnected: boolean = false;
