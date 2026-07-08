@@ -662,6 +662,29 @@ export class MyElement extends LitElement {
 
   private handlePeerLeave(from: string) {
     if (this.currentScreen === "host") {
+      const nickname = this.hostViewerNicknames.get(from) || "참여자";
+      const systemMsg = {
+        sender: "System",
+        content: `📢 [${nickname}] 님이 퇴장하셨습니다.`,
+        system: true,
+        timestamp: Date.now(),
+      };
+
+      this.chatMessages = [...this.chatMessages, systemMsg];
+
+      this.hostDataChannels.forEach((dc, peerId) => {
+        if (peerId !== from && dc.readyState === "open") {
+          dc.send(JSON.stringify(systemMsg));
+        }
+      });
+
+      setTimeout(() => {
+        const chatBox = document.getElementById("chat-messages-box");
+        if (chatBox) {
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+      }, 50);
+
       const pc = this.hostConnections.get(from);
       if (pc) {
         pc.close();
@@ -672,7 +695,6 @@ export class MyElement extends LitElement {
         dc.close();
         this.hostDataChannels.delete(from);
       }
-      const nickname = this.hostViewerNicknames.get(from) || "참여자";
       this.hostViewerNicknames.delete(from);
       this.updateParticipants();
 
@@ -693,7 +715,6 @@ export class MyElement extends LitElement {
       }
 
       document.querySelectorAll(`audio[data-viewer-id="${from}"]`).forEach((el) => el.remove());
-      this.showToast(`🚪 [${nickname}] 님이 퇴장하셨습니다.`);
     } else if (this.currentScreen === "viewer" && from === "host") {
       this.leaveSession();
       this.showToast("🛑 호스트가 공유를 중단하여 메인으로 대기합니다.");
@@ -704,6 +725,29 @@ export class MyElement extends LitElement {
     channel.onopen = () => {
       if (this.currentScreen === "host") {
         this.updateParticipants();
+        
+        const nickname = this.hostViewerNicknames.get(_remotePeerId) || "참여자";
+        const systemMsg = {
+          sender: "System",
+          content: `📢 [${nickname}] 님이 입장하셨습니다.`,
+          system: true,
+          timestamp: Date.now(),
+        };
+
+        this.chatMessages = [...this.chatMessages, systemMsg];
+
+        this.hostDataChannels.forEach((dc) => {
+          if (dc.readyState === "open") {
+            dc.send(JSON.stringify(systemMsg));
+          }
+        });
+
+        setTimeout(() => {
+          const chatBox = document.getElementById("chat-messages-box");
+          if (chatBox) {
+            chatBox.scrollTop = chatBox.scrollHeight;
+          }
+        }, 50);
       } else if (this.currentScreen === "viewer") {
         channel.send(JSON.stringify({ type: "request-participants" }));
       }
