@@ -6,8 +6,9 @@
   "bin": "server/control-agent.cjs",
   "scripts": {
     "dev": "vite --host",
-    "build": "npm run build:agent && npm run zip && tsc && vite build",
+    "build": "npm run build:pages",
     "build:pages": "tsc && vite build",
+    "build:agent-zip": "npm run build:agent && npm run zip",
     "build:agent": "pkg . -t node18-win-x64 -o public/LANLink_Helper.exe",
     "zip": "powershell -Command \"Compress-Archive -Path public/LANLink_Helper.exe -DestinationPath public/LANLink_Remote_Helper.zip -Force\"",
     "preview": "vite preview",
