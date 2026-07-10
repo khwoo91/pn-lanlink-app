@@ -9,7 +9,7 @@
     "build": "npm run build:agent && npm run zip && tsc && vite build",
     "build:pages": "tsc && vite build",
     "build:agent": "pkg . -t node18-win-x64 -o public/LANLink_Helper.exe",
-    "zip": "powershell -Command \"New-Item -ItemType Directory -Path temp_zip -Force; Copy-Item public/LANLink_Helper.exe -Destination temp_zip; Compress-Archive -Path temp_zip/* -DestinationPath public/LANLink_Remote_Helper.zip -Force; Remove-Item -Path temp_zip -Recurse -Force\"",
+    "zip": "powershell -Command \"Compress-Archive -Path public/LANLink_Helper.exe -DestinationPath public/LANLink_Remote_Helper.zip -Force\"",
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{ts,css,html}\" \"*.html\"",
     "agent": "node server/control-agent.cjs",
