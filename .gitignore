@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Built binaries and archives
+public/*.exe
+public/*.zip
+temp_zip/
+
+# Temporary files
+query
+
